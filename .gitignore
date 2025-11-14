@@ -1,0 +1,8 @@
+docs/build/
+test/plots/*
+.DS_Store
+*/.DS_Store
+*/*/.DS_Store
+.CondaPkg/
+.ipynb_checkpoints
+Manifest.toml
