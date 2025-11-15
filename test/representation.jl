@@ -28,14 +28,14 @@
 		@test getNumberType(y3) == BigFloat
 	end
 
-	# @testset "getNotationType" begin
-	# 	repr1 = NumberRepresentationPlain(12.34, FixedPointNotation)
-	# 	repr2 = NumberRepresentationUnicode(12.34, ScientificNotation)
-	# 	repr3 = NumberRepresentationPlain(12.34, EngineeringNotation)
-	# 	@test getNotationType(repr1) == FixedPointNotation
-	# 	@test getNotationType(repr2) == ScientificNotation
-	# 	@test getNotationType(repr3) == EngineeringNotation
-	# end
+	@testset "getNotationType" begin
+		repr1 = NumberRepresentationPlain(12.34, FixedPointNotation)
+		repr2 = NumberRepresentationUnicode(12.34, ScientificNotation)
+		repr3 = NumberRepresentationPlain(12.34, EngineeringNotation)
+		@test getNotationType(repr1) == FixedPointNotation
+		@test getNotationType(repr2) == ScientificNotation
+		@test getNotationType(repr3) == EngineeringNotation
+	end
 
 end
 
@@ -153,21 +153,21 @@ end
 		@test repr7.representation == "1.00001×10³"
 	end
 
-
 	@testset "notations" begin
-		repr1 = NumberRepresentationUnicode(123456789.0, EngineeringNotation; decimals = 2)
+		repr1 = NumberRepresentationUnicode(12345678.0, EngineeringNotation; decimals = 2)
 		sig, exp = decomposeNumberFromString(repr1.representation, getTimesSymbol(repr1))
-		# e = parse(Int, replace(exp, r"\s+" => ""))# remove whitespace and parse exponent
 
+		# remove whitespace; drop "10" prefix; keep only signs and digits (including superscripts)
 		expStr = replace(exp, r"\s+" => "")
-		expStr = replace(expStr, r"^10" => "")                     # drop "10" prefix
-		expStr = replace(expStr, r"[^\d\+\-⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]" => "")   # keep only signs and digits (including superscripts)
+		expStr = replace(expStr, r"^10" => "")
+		expStr = replace(expStr, r"[^\d\+\-⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]" => "")
+
 		s = String([get(superscriptSymbolsDictFrom, c, c) for c ∈ expStr])
 		e = parse(Int, s)
 
-		# @test occursin("×10", repr1.representation)
-		# @test ! isnothing(exp)
-		# @test e % 3 == 0
+		@test occursin("×10", repr1.representation)
+		@test ! isnothing(exp)
+		@test e % 3 == 0
 	end
 
 end
