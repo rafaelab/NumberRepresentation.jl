@@ -59,10 +59,10 @@ NumberRepresentationPlain(number::Real, ::Type{EngineeringNotation}; decimals::I
 	end
 
 	s1 = formatted(number, :ENG; ndigits = nDigits)
-	sig, exp = decomposeNumberString(s1, "×")
+	sig, exp = decomposeNumberFromString(s1, "×")
 
 	s = "$(sig)e$(exp)"
-	repr = NumberRepresentationPlain{typeof(number), EngineeringNotation}(number, s, timesSymbol)
+	repr = NumberRepresentationPlain{typeof(number), EngineeringNotation}(number, s)
 	updateRepresentation!(repr; signSignificand = signSignificand, signExponent = signExponent, shortenOneTimes = shortenOneTimes, shortenBaseToZero = shortenBaseToZero, ε = ε)
 
 	return repr
@@ -135,7 +135,6 @@ NumberRepresentationUnicode(number::Real; args...) = begin
 end
 
 
-
 # ----------------------------------------------------------------------------------------------- #
 #
 @doc """
@@ -154,13 +153,55 @@ mutable struct NumberRepresentationTeX{T, U} <: AbstractNumberRepresentation{T, 
 	timesSymbol::String
 end
 
-# NumberRepresentationTeX(number::T, representation::String, ::Type{N}; timesSymbol::String = "×") where {T <: Real, N <: AbstractNumberNotation} = begin
-# 	return NumberRepresentationTeX{T, N}(number, representation, timesSymbol)
-# end
+NumberRepresentationTeX(number::Real, ::Type{U}; timesSymbol::String = "\\times", args...) where {U <: AbstractNumberNotation} = begin
+	reprU = NumberRepresentationUnicode(number; args...)
+	return NumberRepresentationTeX(reprU; timesSymbol = timesSymbol)
+end
 
-# NumberRepresentationTeX(number::Real, representation::String; timesSymbol::String = "×") = begin
-# 	return NumberRepresentationTeX(number, representation, FixedPointNotation; timesSymbol = timesSymbol)
-# end
+NumberRepresentationTeX(number::Real, notation::AbstractNumberNotation; args...) = begin
+	return NumberRepresentationTeX(number, typeof(notation); args...)
+end
+
+NumberRepresentationTeX(number::Real; args...) = begin
+	return NumberRepresentationTeX(number, ScientificNotation; args...)
+end
+
+NumberRepresentationTeX(uni::NumberRepresentationUnicode; timesSymbol::String = "\\times") = begin
+	s = uni.representation
+
+	io = IOBuffer()
+	inExp = false
+
+	for c ∈ s
+		if haskey(superscriptSymbolsDictFrom, c)
+			mapped = superscriptSymbolsDictFrom[c]
+			if ! inExp
+				print(io, "^{", mapped)
+				inExp = true
+			else
+				print(io, mapped)
+			end
+		else
+			if inExp
+				print(io, "}")
+				inExp = false
+			end
+			if c == '×'
+				print(io, " " * timesSymbol * " ")
+			else
+				print(io, c)
+			end
+		end
+	end
+
+	if inExp
+		print(io, "}")
+	end
+
+	str = String(take!(io))
+
+	return NumberRepresentationTeX{typeof(uni.number), getNotationType(uni)}(uni.number, str, timesSymbol)
+end
 
 
 # ----------------------------------------------------------------------------------------------- #
@@ -234,7 +275,7 @@ function showSignExponent!(repr::AbstractNumberRepresentation{T, FixedPointNotat
 end
 
 function showSignExponent!(repr::NumberRepresentationPlain{T, U}) where {T, U <: Union{ScientificNotation, EngineeringNotation}}
-	# sig, exp = decomposeNumberString(repr.representation, getTimesSymbol(repr))
+	# sig, exp = decomposeNumberFromString(repr.representation, getTimesSymbol(repr))
 	# if startswith(exp, "+") || startswith(exp, "-")
 	# 	return repr
 	# else
@@ -249,23 +290,8 @@ function showSignExponent!(repr::NumberRepresentationPlain{T, U}) where {T, U <:
 	return repr
 end
 
-# function showSignExponent!(repr::NumberRepresentationUnicode{T, U}) where {T, U <: Union{ScientificNotation, EngineeringNotation}}
-# 	significand, exponent = decomposeNumberString(repr.representation, repr.timesSymbol)
-# 	isnothing(exponent) && return repr
-
-# 	if occursin("⁺", exponent) || occursin("⁻", exponent)
-# 		return repr
-# 	end
-
-# 	superscriptSign = log10(abs(repr.number)) ≥ 0 ? '⁺' : '⁻'
-# 	# repr.representation = string(significand, repr.timesSymbol, superscriptSign, exponent)
-# 	repr.representation = replace(repr.representation, repr.timesSymbol * "10" => repr.timesSymbol * "10" * string(superscriptSign))
-
-# 	return repr
-# end
-
 function showSignExponent!(repr::NumberRepresentationUnicode{T, U}) where {T, U <: Union{ScientificNotation, EngineeringNotation}}
-	significand, exponent = decomposeNumberString(repr.representation, repr.timesSymbol)
+	significand, exponent = decomposeNumberFromString(repr.representation, repr.timesSymbol)
 	isnothing(exponent) && return repr
 
 	if occursin("⁺", exponent) || occursin("⁻", exponent)
@@ -311,7 +337,7 @@ function shortenOneTimes!(repr::NumberRepresentationPlain; args...)
 end
 
 function shortenOneTimes!(repr::NumberRepresentationUnicode{T, U}; ε::Real = default_ε) where {T, U <: Union{ScientificNotation, EngineeringNotation}}
-	sigStr, expStr = decomposeNumberString(repr.representation, repr.timesSymbol)
+	sigStr, expStr = decomposeNumberFromString(repr.representation, repr.timesSymbol)
 
 	if ! isnothing(expStr) && isapprox(abs(getSignificand(repr.number)), 1.; atol = ε)
 		repr.representation = expStr
@@ -351,7 +377,7 @@ function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U}; signSignif
 			fmt = signSignificand ? "%+.$(nDecimals)f" : "%.$(nDecimals)f"
 			repr.representation = @eval @sprintf($fmt, 1.0)
 		else
-			repr.representation = decomposeNumberString(repr.representation, getTimesSymbol(repr))[1]
+			repr.representation = decomposeNumberFromString(repr.representation, getTimesSymbol(repr))[1]
 		end
 	end
 
