@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------------------------- #
 #
 @doc """
-	decomposeNumberString(s::AbstractString, times::String) -> (significandStr::String, exponentStr::Union{String, Nothing})
+	decomposeNumberFromString(s::AbstractString, times::String) -> (significandStr::String, exponentStr::Union{String, Nothing})
 
 Decomposes a number string into its significand and exponent parts based on the provided times symbol.
 
@@ -12,7 +12,7 @@ Decomposes a number string into its significand and exponent parts based on the 
 # Output
 . A tuple containing the significand string and the exponent string (or `nothing` if no exponent is present).
 """
-function decomposeNumberString(s::AbstractString, times::String)
+function decomposeNumberFromString(s::AbstractString, times::String)
 	if occursin(times, s)
 		parts = split(s, times)
 		significandStr = replace(parts[1], r"\s+" => "")
@@ -27,7 +27,7 @@ end
 # ----------------------------------------------------------------------------------------------- #
 #
 @doc """
-	parseNumberString(s::AbstractString, times::String, ::Type{T}) where {T <: Real} -> T
+	parseNumberFromString(s::AbstractString, times::String, ::Type{T}) where {T <: Real} -> T
 
 Parses a number string into a numeric value of type `T`, handling both standard and scientific notation based on the provided times symbol.
 
@@ -39,7 +39,7 @@ Parses a number string into a numeric value of type `T`, handling both standard 
 # Output
 . A numeric value of type `T` representing the parsed number.
 """
-function parseNumberString(s::AbstractString, times::String, ::Type{T}) where {T <: Real}
+function parseNumberFromString(s::AbstractString, times::String, ::Type{T}) where {T <: Real}
 	r = decomposeNumberString(s, times)
 	if length(r) > 1
 		significandStr, exponentStr = r
@@ -55,8 +55,9 @@ function parseNumberString(s::AbstractString, times::String, ::Type{T}) where {T
 	return parse(T, replace(s, r"\s+" => ""))
 end
 
-parseNumberString(s::AbstractString, times::String) = begin 
-	return parseNumberString(s, times, Float64)
+parseNumberFromString(s::AbstractString, times::String) = begin 
+	return parseNumberFromString(s, times, Float64)
 end
+
 
 # ----------------------------------------------------------------------------------------------- #

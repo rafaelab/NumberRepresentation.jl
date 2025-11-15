@@ -9,7 +9,8 @@ export
 	NumberRepresentationTeX,
 	getSignificand,
 	getExponent,
-	decomposeNumberString,
+	decomposeNumberFromString,
+	parseNumberFromString,
 	getTimesSymbol,
 	getNumberType,
 	getNotationType
