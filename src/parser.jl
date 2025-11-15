@@ -40,7 +40,7 @@ Parses a number string into a numeric value of type `T`, handling both standard 
 . A numeric value of type `T` representing the parsed number.
 """
 function parseNumberFromString(s::AbstractString, times::String, ::Type{T}) where {T <: Real}
-	r = decomposeNumberString(s, times)
+	r = decomposeNumberFromString(s, times)
 	if length(r) > 1
 		significandStr, exponentStr = r
 		significand = parse(Float64, replace(significandStr, r"\s+" => ""))
