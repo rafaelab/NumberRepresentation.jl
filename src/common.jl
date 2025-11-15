@@ -1,7 +1,11 @@
 # ----------------------------------------------------------------------------------------------- #
 #
-const defaultTimesSymbols = ["\\times", "×", "x", "*", "⋅"]
+# The default tolerance for approximations in functions like `shortenOneTimes!`, `shortenBaseToZero!`, etc.
+const default_ε = 1e-12
 
+# ----------------------------------------------------------------------------------------------- #
+#
+# Regex special characters set
 const regexSpecialChars = Set{Char}(
 	[
 		'\\', 
@@ -22,6 +26,9 @@ const regexSpecialChars = Set{Char}(
 	]
 )
 
+# ----------------------------------------------------------------------------------------------- #
+#
+# Superscript symbols dictionary: from normal characters to superscript
 const superscriptSymbolsDictTo = Dict{Char, Char}(
 	'0' => '⁰',
 	'1' => '¹',
@@ -38,6 +45,9 @@ const superscriptSymbolsDictTo = Dict{Char, Char}(
 	'.' => '·'
 )
 
+# ----------------------------------------------------------------------------------------------- #
+#
+# Superscript symbols dictionary: from superscript to normal characters
 const superscriptSymbolsDictFrom = Dict{Char, Char}(
 	'⁰' => '0',
 	'¹' => '1',
