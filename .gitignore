@@ -4,5 +4,6 @@ test/plots/*
 */.DS_Store
 */*/.DS_Store
 .CondaPkg/
+.vscode/
 .ipynb_checkpoints
 Manifest.toml
