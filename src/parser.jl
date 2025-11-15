@@ -3,12 +3,13 @@ function decomposeNumberString(s::AbstractString, times::String)
 		parts = split(s, times)
 		significandStr = replace(parts[1], r"\s+" => "")
 		exponentStr = replace(parts[2], r"\s+" => "")
-		return significandStr, exponentStr
+
+		return String(significandStr), String(exponentStr)
 		# significand = parse(Float64, significandStr)
 		# exponent = parse(Int, exponentStr)
 		# return significand * exp10(exponent)
 	else
-		return s, nothing
+		return String(s), nothing
 	end
 end
 
@@ -18,8 +19,12 @@ function parseNumberString(s::AbstractString, times::String, ::Type{T}) where {T
 	if length(r) > 1
 		significandStr, exponentStr = r
 		significand = parse(Float64, replace(significandStr, r"\s+" => ""))
-		exponent = parse(Int, replace(exponentStr, r"\s+" => ""))
-		return significand * exp10(exponent)
+		if isnothing(exponentStr)
+			return T(significand)
+		else
+			exponent = parse(Int, replace(exponentStr, r"\s+" => ""))
+			return T(significand * exp10(exponent))
+		end
 	end
 
 	return parse(T, replace(s, r"\s+" => ""))
