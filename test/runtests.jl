@@ -19,7 +19,6 @@ import NumberRepresentation:
 
 
 
-
 # ---------------------------------------------------------------------------------- #
 #
 @testset "Testing decomposition" begin
