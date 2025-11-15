@@ -1,21 +1,12 @@
 using Test
 
-push!(LOAD_PATH, joinpath(@__DIR__, "..", "src"))
 using NumberRepresentation 
 
 import NumberRepresentation: 
-	getNumberType,
-	getNotationType,
-	getTimesSymbol,
 	showSignSignificand!,
 	showSignExponent!,
 	shortenOneTimes!,
-	updateRepresentation!,
-	decomposeNumberString,
-	parseNumberString,
-	getSignificand,
-	getExponent
-
+	updateRepresentation!
 
 
 

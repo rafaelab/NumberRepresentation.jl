@@ -6,7 +6,13 @@ export
 	EngineeringNotation,
 	NumberRepresentationPlain,
 	NumberRepresentationUnicode,
-	NumberRepresentationTeX
+	NumberRepresentationTeX,
+	getSignificand,
+	getExponent,
+	decomposeNumberString,
+	getTimesSymbol,
+	getNumberType,
+	getNotationType
 
 
 using Printf
@@ -17,7 +23,6 @@ include("common.jl")
 include("regex.jl")
 include("number.jl")
 include("parser.jl")
-# include("helpers.jl")
 include("notation.jl")
 include("representation.jl")
 
