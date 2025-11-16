@@ -29,53 +29,43 @@ This is the direct output of NumericIO formatting.
 mutable struct NumberRepresentationPlain{T, U} <: AbstractNumberRepresentation{T, U, String}
 	number::T
 	representation::String
+	config::NumberRepresentationConfig
 end
 
-NumberRepresentationPlain(number::Real, ::Type{FixedPointNotation}; decimals::Integer = 6, signSignificand::Bool = true, signExponent::Bool = false, shortenOneTimes::Bool = false, shortenBaseToZero::Bool = false, ε::Real = default_ε) = begin
-	fmt = signSignificand ? "%+.$(decimals)f" : "%.$(decimals)f"
+NumberRepresentationPlain(number::Real, ::Type{FixedPointNotation}, config::NumberRepresentationConfig) = begin
+	fmt = config.signSignificand ? "%+.$(config.decimals)f" : "%.$(config.decimals)f"
 	str = @eval @sprintf($fmt, $number)
-
-	repr = NumberRepresentationPlain{typeof(number), FixedPointNotation}(number, str)
-	updateRepresentation!(repr; signSignificand = signSignificand, signExponent = signExponent, shortenOneTimes = shortenOneTimes, shortenBaseToZero = shortenBaseToZero, ε = ε)
-
+	repr = NumberRepresentationPlain{typeof(number), FixedPointNotation}(number, str, config)
+	updateRepresentation!(repr)
 	return repr
-end	
+end
 
-NumberRepresentationPlain(number::Real, ::Type{ScientificNotation}; decimals::Integer = 3, signSignificand::Bool = false, signExponent::Bool = false, shortenOneTimes::Bool = false, shortenBaseToZero::Bool = false, ε::Real = default_ε) = begin
-	fmt = signSignificand ? "%+.$(decimals)e" : "%.$(decimals)e"
+NumberRepresentationPlain(number::Real, ::Type{ScientificNotation}, config::NumberRepresentationConfig) = begin
+	fmt = config.signSignificand ? "%+.$(config.decimals)e" : "%.$(config.decimals)e"
 	s = @eval @sprintf($fmt, $number)
 
-	repr = NumberRepresentationPlain{typeof(number), ScientificNotation}(number, s)
-	updateRepresentation!(repr; signSignificand = signSignificand, signExponent = signExponent, shortenOneTimes = shortenOneTimes, shortenBaseToZero = shortenBaseToZero, ε = ε)
+	repr = NumberRepresentationPlain{typeof(number), ScientificNotation}(number, s, config)
+	updateRepresentation!(repr)
 
 	return repr
 end
 
-NumberRepresentationPlain(number::Real, ::Type{EngineeringNotation}; decimals::Integer = 3, signSignificand::Bool = false, signExponent::Bool = false, shortenOneTimes::Bool = false, shortenBaseToZero::Bool = false, ε::Real = default_ε) = begin
+NumberRepresentationPlain(number::Real, ::Type{EngineeringNotation}, config::NumberRepresentationConfig) = begin
 	s0 = formatted(number, :ENG)
 	parts = split(split(s0, "×")[1], ".")
 	if length(parts) == 1
 		nDigits = 0
 	else
-		nDigits = decimals + length(@sprintf("%.0f", number / (exp10(NumericIO.base10exp(number))))) + 1
+		nDigits = config.decimals + length(@sprintf("%.0f", number / (exp10(NumericIO.base10exp(number))))) + 1
 	end
 
 	s1 = formatted(number, :ENG; ndigits = nDigits)
 	sig, exp = decomposeNumberFromString(s1, "×")
 
 	s = "$(sig)e$(exp)"
-	repr = NumberRepresentationPlain{typeof(number), EngineeringNotation}(number, s)
-	updateRepresentation!(repr; signSignificand = signSignificand, signExponent = signExponent, shortenOneTimes = shortenOneTimes, shortenBaseToZero = shortenBaseToZero, ε = ε)
-
+	repr = NumberRepresentationPlain{typeof(number), EngineeringNotation}(number, s, config)
+	updateRepresentation!(repr)
 	return repr
-end
-
-NumberRepresentationPlain(number::Real, notation::AbstractNumberNotation; args...) = begin
-	return NumberRepresentationPlain(number, typeof(notation); args...)
-end
-
-NumberRepresentationPlain(number::Real; args...) = begin
-	return NumberRepresentationPlain(number, FixedPointNotation; args...)
 end
 
 
@@ -94,47 +84,36 @@ Defines a number representation in unicode string format.
 mutable struct NumberRepresentationUnicode{T, U} <: AbstractNumberRepresentation{T, U, String}
 	number::T
 	representation::String
+	config::NumberRepresentationConfig
 	timesSymbol::String
 end
 
 
-NumberRepresentationUnicode(number::Real, ::Type{FixedPointNotation}; decimals::Integer = 6, signSignificand::Bool = true, signExponent::Bool = false, shortenOneTimes::Bool = false, shortenBaseToZero::Bool = false, ε::Real = default_ε, timesSymbol::Union{String, Char} = "×") = begin
-	fmt = signSignificand ? "%+.$(decimals)f" : "%.$(decimals)f"
+NumberRepresentationUnicode(number::Real, ::Type{FixedPointNotation}, config::NumberRepresentationConfig; timesSymbol::Union{String, Char} = "×") = begin
+	fmt = config.signSignificand ? "%+.$(config.decimals)f" : "%.$(config.decimals)f"
 	str = @eval @sprintf($fmt, $number)
-
-	repr = NumberRepresentationUnicode{typeof(number), FixedPointNotation}(number, str, timesSymbol)
-	updateRepresentation!(repr; signSignificand = signSignificand, signExponent = signExponent, shortenOneTimes = shortenOneTimes, shortenBaseToZero = shortenBaseToZero, ε = ε)
+	repr = NumberRepresentationUnicode{typeof(number), FixedPointNotation}(number, str, config, timesSymbol)
+	updateRepresentation!(repr)
 
 	return repr
 end	
 
-NumberRepresentationUnicode(number::Real, ::Type{ScientificNotation}; decimals::Integer = 3, signSignificand::Bool = false, signExponent::Bool = false, shortenOneTimes::Bool = false, shortenBaseToZero::Bool = false, ε::Real = default_ε, timesSymbol::Union{String, Char} = "×") = begin
-	str = formatted(number, :SCI; ndigits = decimals + 1)
-
-	repr = NumberRepresentationUnicode{typeof(number), ScientificNotation}(number, str, timesSymbol)
-	updateRepresentation!(repr; signSignificand = signSignificand, signExponent = signExponent, shortenOneTimes = shortenOneTimes, shortenBaseToZero = shortenBaseToZero, ε = ε)
-
+NumberRepresentationUnicode(number::Real, ::Type{ScientificNotation}, config::NumberRepresentationConfig; timesSymbol::Union{String, Char} = "×") = begin
+	str = formatted(number, :SCI; ndigits = config.decimals + 1)
+	repr = NumberRepresentationUnicode{typeof(number), ScientificNotation}(number, str, config, timesSymbol)
+	updateRepresentation!(repr)
 	return repr
 end
 
-NumberRepresentationUnicode(number::Real, ::Type{EngineeringNotation}; decimals::Integer = 2, signSignificand::Bool = false, signExponent::Bool = false, shortenOneTimes::Bool = false, shortenBaseToZero::Bool = false, ε::Real = default_ε, timesSymbol::Union{String, Char} = "×") = begin
+NumberRepresentationUnicode(number::Real, ::Type{EngineeringNotation}, config::NumberRepresentationConfig; timesSymbol::Union{String, Char} = "×") = begin
 	str0 = formatted(number, :ENG)
 	nIntegers = getNumberOfIntegersFromString(str0, timesSymbol)
-	str = formatted(number, :ENG; ndigits = decimals + nIntegers + 1)
-
-	repr = NumberRepresentationUnicode{typeof(number), ScientificNotation}(number, str, timesSymbol)
-	updateRepresentation!(repr; signSignificand = signSignificand, signExponent = signExponent, shortenOneTimes = shortenOneTimes, shortenBaseToZero = shortenBaseToZero, ε = ε)
-
+	str = formatted(number, :ENG; ndigits = config.decimals + nIntegers + 1)
+	repr = NumberRepresentationUnicode{typeof(number), ScientificNotation}(number, str, config, timesSymbol)
+	updateRepresentation!(repr)
 	return repr
 end
 
-NumberRepresentationUnicode(number::Real, notation::AbstractNumberNotation; args...) = begin
-	return NumberRepresentationUnicode(number, typeof(notation); args...)
-end
-
-NumberRepresentationUnicode(number::Real; args...) = begin
-	return NumberRepresentationUnicode(number, ScientificNotation; args...)
-end
 
 
 # ----------------------------------------------------------------------------------------------- #
@@ -152,24 +131,21 @@ Defines a number representation in TeX string format.
 mutable struct NumberRepresentationTeX{T, U} <: AbstractNumberRepresentation{T, U, String}
 	number::T
 	representation::String
+	config::NumberRepresentationConfig
 	timesSymbol::String
 end
 
-NumberRepresentationTeX(number::Real, ::Type{U}; timesSymbol::String = "\\times", args...) where {U <: AbstractNumberNotation} = begin
-	reprU = NumberRepresentationUnicode(number; args...)
-	return NumberRepresentationTeX(reprU; timesSymbol = timesSymbol)
+NumberRepresentationTeX(number::Real, ::Type{U}, config::NumberRepresentationConfig; timesSymbol::String = "\\times") where {U <: AbstractNumberNotation} = begin
+	return NumberRepresentationTeX(NumberRepresentationUnicode(number, U, config); timesSymbol = timesSymbol)
 end
 
-NumberRepresentationTeX(number::Real, notation::AbstractNumberNotation; args...) = begin
-	return NumberRepresentationTeX(number, typeof(notation); args...)
-end
 
-NumberRepresentationTeX(number::Real; args...) = begin
-	return NumberRepresentationTeX(number, ScientificNotation; args...)
-end
+NumberRepresentationTeX(reprU::NumberRepresentationUnicode; timesSymbol::String = "\\times") = begin
+	number = reprU.number
+	config = reprU.config
+	s = reprU.representation
+	U = getNotationType(reprU)
 
-NumberRepresentationTeX(uni::NumberRepresentationUnicode; timesSymbol::String = "\\times") = begin
-	s = uni.representation
 
 	io = IOBuffer()
 	inExp = false
@@ -202,8 +178,9 @@ NumberRepresentationTeX(uni::NumberRepresentationUnicode; timesSymbol::String = 
 
 	str = String(take!(io))
 
-	return NumberRepresentationTeX{typeof(uni.number), getNotationType(uni)}(uni.number, str, timesSymbol)
+	return NumberRepresentationTeX{typeof(number), U}(number, str, config, timesSymbol)
 end
+
 
 
 # ----------------------------------------------------------------------------------------------- #
@@ -222,7 +199,51 @@ This struct is only activated when Makie.jl is available, through the correspond
 mutable struct NumberRepresentationMakieRichText{T, U, S} <: AbstractNumberRepresentation{T, U, S}
 	number::T
 	representation::S
+	config::NumberRepresentationConfig
 	timesSymbol::String
+end
+
+
+# ----------------------------------------------------------------------------------------------- #
+#
+# Meta-programming for defining redundant constructors.
+#
+for T ∈ (:NumberRepresentationPlain, :NumberRepresentationTeX, :NumberRepresentationUnicode, :NumberRepresentationMakieRichText)
+	@eval begin 
+
+		function $(T)(number::Real, notation::AbstractNumberNotation, config::NumberRepresentationConfig; args...)
+			opts = haskey(args, :timesSymbol) ? (; (key => value for (key, value) ∈ args if key ≠ :timesSymbol)...) : args
+			return $(T)(number, typeof(notation), config; opts...)
+		end
+
+		function $(T)(number::Real, ::Type{U}; args...) where {U <: AbstractNumberNotation}
+			if haskey(args, :timesSymbol)
+				opts = (; (key => value for (key, value) ∈ args if key ≠ :timesSymbol)...)
+				config = NumberRepresentationConfig(; opts...)
+				return $(T)(number, U, config; timesSymbol = args[:timesSymbol])
+			else
+				config = NumberRepresentationConfig(; args...)
+				return $(T)(number, U, config)
+			end
+		end
+
+		function $(T)(number::Real, notation::AbstractNumberNotation; args...)
+			return $(T)(number, typeof(notation); args...)
+		end
+
+		function $(T)(number::Real; args...) 
+			return $(T)(number, ScientificNotation; args...)
+		end
+
+		Base.getproperty(repr::$(T), v::Symbol) = begin 
+			if v ∈ (:decimals, :signSignificand, :signExponent, :shortenOneTimes, :shortenBaseToZero, :toleranceShort)
+				return getfield(repr.config, v)
+			else
+				return getfield(repr, v)
+			end
+		end
+
+	end
 end
 
 
@@ -278,9 +299,6 @@ Modify the representation to include an explicit sign for the significand.
 
 # Input
 . `repr` [`NumberRepresentationPlain`]: the number representation to modify \\
-
-# Output
-. The modified `repr` with explicit sign for the significand.
 """
 function showSignSignificand!(repr::AbstractNumberRepresentation)
 	if startswith(repr.representation, '+') || startswith(repr.representation, '-')
@@ -300,9 +318,6 @@ Modify the representation to include an explicit sign for the exponent.
 
 # Input
 . `repr` [`NumberRepresentationPlain`]: the number representation to modify \\
-
-# Output
-. The modified `repr` with explicit sign for the exponent.
 """
 function showSignExponent!(repr::AbstractNumberRepresentation{T, FixedPointNotation, S}) where {T, S}
 	return repr
@@ -340,28 +355,24 @@ end
 	shortenOneTimes!(repr::NumberRepresentationPlain)
 
 Modify the representation to shorten "1×10^n" to "10^n".
-The function only shortens if the significand is approximately 1, within a tolerance `ε`.
+The function only shortens if the significand is approximately 1, within a tolerance `toleranceShort`.
 
 # Input
 . `repr` [`NumberRepresentationPlain`]: the number representation to modify \
-. `ε` [`Real`]: tolerance for considering the significand approximately 1 \
-
-# Output
-. The modified `repr` with shortened "1×10^n" to "10^n".
+. `toleranceShort` [`Real`]: tolerance for considering the significand approximately 1 \
 """
-function shortenOneTimes!(repr::AbstractNumberRepresentation{T, FixedPointNotation, S}; args...) where {T, S}
+function shortenOneTimes!(repr::AbstractNumberRepresentation{T, FixedPointNotation, S}) where {T, S}
 	return repr
 end
 
-function shortenOneTimes!(repr::NumberRepresentationPlain; args...)
-	# @warn("NumberRepresentationPlain does not support shortenOneTimes!")
+function shortenOneTimes!(repr::NumberRepresentationPlain)
 	return repr
 end
 
-function shortenOneTimes!(repr::NumberRepresentationUnicode{T, U}; ε::Real = default_ε) where {T, U <: Union{ScientificNotation, EngineeringNotation}}
+function shortenOneTimes!(repr::NumberRepresentationUnicode{T, U}) where {T, U <: Union{ScientificNotation, EngineeringNotation}}
 	sigStr, expStr = decomposeNumberFromString(repr.representation, repr.timesSymbol)
 
-	if ! isnothing(expStr) && isapprox(abs(getSignificand(repr.number)), 1.; atol = ε)
+	if ! isnothing(expStr) && isapprox(abs(getSignificand(repr.number)), 1.; atol = repr.toleranceShort)
 		repr.representation = expStr
 		s = occursin("-", sigStr) ? "-" : (occursin("+", sigStr) ? "+" : "")
 		repr.representation = s * repr.representation
@@ -374,7 +385,7 @@ end
 # ----------------------------------------------------------------------------------------------- #
 #
 @doc """
-	shortenBaseToZero!(repr::NumberRepresentationPlain; signSignificand::Bool, shortenOneTimes::Bool, ε::Real)
+	shortenBaseToZero!(repr::NumberRepresentationPlain; signSignificand::Bool, shortenOneTimes::Bool, toleranceShort::Real)
 
 Modify the representation to shorten "B^0" to "1".
 
@@ -382,19 +393,15 @@ Modify the representation to shorten "B^0" to "1".
 . `repr` [`NumberRepresentationPlain`]: the number representation to modify \
 . `shortenOneTimes` [`Bool`]: whether to shorten "1×10^n" to "10^n" \
 . `signSignificand` [`Bool`]: whether to include an explicit sign for the significand \
-. `ε` [`Real`]: tolerance for considering the exponent approximately zero \
-
-# Output
-. The modified `repr` with shortened "B^0" to "1".
+. `toleranceShort` [`Real`]: tolerance for considering the exponent approximately zero \
 """
-function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U, S}; args...) where {T, U <: FixedPointNotation, S}
-	# @warn("shortenBaseToZero! is not applicable for FixedPointNotation.")
+function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U, S}) where {T, U <: FixedPointNotation, S}
 	return repr
 end
 
-function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U, S}; signSignificand::Bool = false, shortenOneTimes::Bool = false, ε::Real = default_ε) where {T, U <: Union{ScientificNotation, EngineeringNotation}, S}
-	if isapprox(getExponent(repr.number), 0; atol = ε)
-		if shortenOneTimes && isapprox(getSignificand(repr.number), 1.; atol = ε)
+function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U, S}) where {T, U <: Union{ScientificNotation, EngineeringNotation}, S}
+	if isapprox(getExponent(repr.number), 0; atol = repr.toleranceShort)
+		if repr.shortenOneTimes && isapprox(getSignificand(repr.number), 1.; atol = repr.toleranceShort)
 			nDecimals = getNumberOfDecimalsFromString(repr.representation, getTimesSymbol(repr))
 			fmt = signSignificand ? "%+.$(nDecimals)f" : "%.$(nDecimals)f"
 			repr.representation = @eval @sprintf($fmt, 1.0)
@@ -409,11 +416,19 @@ end
 
 # ----------------------------------------------------------------------------------------------- #
 #
-function updateRepresentation!(repr::AbstractNumberRepresentation; signSignificand::Bool = false, signExponent::Bool = false, shortenOneTimes::Bool = false, shortenBaseToZero::Bool = false, ε::Real = default_ε)
-	signSignificand && showSignSignificand!(repr)
-	signExponent && showSignExponent!(repr)
-	shortenOneTimes && shortenOneTimes!(repr; ε = ε)
-	shortenBaseToZero && shortenBaseToZero!(repr; signSignificand = signSignificand, shortenOneTimes = shortenOneTimes, ε = ε)
+@doc """
+	updateRepresentation!(repr::AbstractNumberRepresentation)
+
+Update the number representation based on the configuration options.
+
+# Input
+. `repr` [`AbstractNumberRepresentation`]: the number representation to update \\
+"""
+function updateRepresentation!(repr::AbstractNumberRepresentation)
+	repr.config.signSignificand && showSignSignificand!(repr)
+	repr.config.signExponent && showSignExponent!(repr)
+	repr.config.shortenOneTimes && shortenOneTimes!(repr)
+	repr.config.shortenBaseToZero && shortenBaseToZero!(repr)
 	return repr
 end
 
