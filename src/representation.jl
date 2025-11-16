@@ -244,6 +244,10 @@ macro buildNumberRepresentationConstructor(T)
 			end
 		end
 
+		function $(esc(T))(number::Real, config::NumberRepresentationConfig; args...)
+			return $(esc(T))(number, ScientificNotation, config; args...)
+		end
+
 		function $(esc(T))(number::Real, notation::AbstractNumberNotation; args...)
 			return $(esc(T))(number, typeof(notation); args...)
 		end
@@ -430,7 +434,7 @@ function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U, S}) where {
 	if isapprox(getExponent(repr.number), 0; atol = repr.toleranceShort)
 		if repr.shortenOneTimes && isapprox(getSignificand(repr.number), 1.; atol = repr.toleranceShort)
 			nDecimals = getNumberOfDecimalsFromString(repr.representation, getTimesSymbol(repr))
-			fmt = signSignificand ? "%+.$(nDecimals)f" : "%.$(nDecimals)f"
+			fmt = repr.signSignificand ? "%+.$(nDecimals)f" : "%.$(nDecimals)f"
 			repr.representation = @eval @sprintf($fmt, 1.0)
 		else
 			repr.representation = decomposeNumberFromString(repr.representation, getTimesSymbol(repr))[1]
@@ -452,10 +456,10 @@ Update the number representation based on the configuration options.
 . `repr` [`AbstractNumberRepresentation`]: the number representation to update \\
 """
 function updateRepresentation!(repr::AbstractNumberRepresentation)
-	repr.config.signSignificand && showSignSignificand!(repr)
-	repr.config.signExponent && showSignExponent!(repr)
-	repr.config.shortenOneTimes && shortenOneTimes!(repr)
-	repr.config.shortenBaseToZero && shortenBaseToZero!(repr)
+	repr.signSignificand && showSignSignificand!(repr)
+	repr.signExponent && showSignExponent!(repr)
+	repr.shortenOneTimes && shortenOneTimes!(repr)
+	repr.shortenBaseToZero && shortenBaseToZero!(repr)
 	return repr
 end
 
