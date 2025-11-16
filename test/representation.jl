@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------------- #
 #
-@testset "AbstractNumberRepresentation: general behaviour" begin
+@testset "AbstractNumberRepresentation" begin
 	
 	@testset "getTimesSymbol" begin
 		repr1 = NumberRepresentationPlain(12.34, FixedPointNotation)
@@ -35,6 +35,15 @@
 		@test getNotationType(repr1) == FixedPointNotation
 		@test getNotationType(repr2) == ScientificNotation
 		@test getNotationType(repr3) == EngineeringNotation
+	end
+
+	@testset "getStringType" begin
+		repr1 = NumberRepresentationPlain(12.34, FixedPointNotation)
+		repr2 = NumberRepresentationUnicode(12.34, ScientificNotation)
+		repr3 = NumberRepresentationTeX(12.34, EngineeringNotation)
+		@test typeof(repr1.representation) == String
+		@test typeof(repr2.representation) == String
+		@test typeof(repr3.representation) == String
 	end
 
 end
