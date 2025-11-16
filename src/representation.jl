@@ -7,14 +7,16 @@ An abstract type for number representations.
 
 # Type Parameters
 . `T` [`<: Real`]: the numeric type of the represented number \\
-. `U` [`<: AbstractNumberNotation`]: the notation type used for the representation
+. `U` [`<: AbstractNumberNotation`]: the notation type used for the representation \\
+. `S` : the storage type for the representation (`AbstractString`, etc.) \\
 """
-abstract type AbstractNumberRepresentation{T <: Real, U <: AbstractNumberNotation} end
+abstract type AbstractNumberRepresentation{T <: Real, U <: AbstractNumberNotation, S} end
+
 
 # ----------------------------------------------------------------------------------------------- #
 #
 @doc """
-	NumberRepresentationPlain{T}
+	NumberRepresentationPlain{T, U}
 
 Defines a number representation in plain string format.
 This is the direct output of NumericIO formatting.
@@ -24,7 +26,7 @@ This is the direct output of NumericIO formatting.
 . `representation` [`String`]: the string representation of the number \\
 . `timesSymbol` [`String`]: the multiplication symbol used in the representation \\
 """
-mutable struct NumberRepresentationPlain{T, U} <: AbstractNumberRepresentation{T, U}
+mutable struct NumberRepresentationPlain{T, U} <: AbstractNumberRepresentation{T, U, String}
 	number::T
 	representation::String
 end
@@ -80,7 +82,7 @@ end
 # ----------------------------------------------------------------------------------------------- #
 #
 @doc """
-	NumberRepresentationUnicode
+	NumberRepresentationUnicode{T, U}
 
 Defines a number representation in unicode string format.
 
@@ -89,7 +91,7 @@ Defines a number representation in unicode string format.
 . `representation` [`String`]: the string representation of the number \\
 . `timesSymbol` [`String`]: the multiplication symbol used in the representation \\
 """
-mutable struct NumberRepresentationUnicode{T, U} <: AbstractNumberRepresentation{T, U}
+mutable struct NumberRepresentationUnicode{T, U} <: AbstractNumberRepresentation{T, U, String}
 	number::T
 	representation::String
 	timesSymbol::String
@@ -138,7 +140,7 @@ end
 # ----------------------------------------------------------------------------------------------- #
 #
 @doc """
-	NumberRepresentationTeX
+	NumberRepresentationTeX{T, U}
 
 Defines a number representation in TeX string format.
 
@@ -147,7 +149,7 @@ Defines a number representation in TeX string format.
 . `representation` [`String`]: the string representation of the number \\
 . `timesSymbol` [`String`]: the multiplication symbol used in the representation \\
 """
-mutable struct NumberRepresentationTeX{T, U} <: AbstractNumberRepresentation{T, U}
+mutable struct NumberRepresentationTeX{T, U} <: AbstractNumberRepresentation{T, U, String}
 	number::T
 	representation::String
 	timesSymbol::String
@@ -207,11 +209,35 @@ end
 # ----------------------------------------------------------------------------------------------- #
 #
 @doc """
+	NumberRepresentationMakieRichText{T, U, S}
+	
+Defines a number representation in Makie RichText format.
+This struct is only activated when Makie.jl is available, through the corresponding extension in `NumberRepresentation.jl/ext/`.
+
+# Fields
+. `number` [`Real`]: the number being represented \\
+. `representation` [`S`]: the string representation of the number, typically `Makie.RichText`; this is NOT a subtype of `AbstractString` \\
+. `timesSymbol` [`String`]: the multiplication symbol used in the representation \\
+"""
+mutable struct NumberRepresentationMakieRichText{T, U, S} <: AbstractNumberRepresentation{T, U, S}
+	number::T
+	representation::S
+	timesSymbol::String
+end
+
+NumberRepresentationMakieRichText(number::Real; args...) = begin
+	return NumberRepresentationMakieRichText(number, ScientificNotation; args...)
+end
+
+
+# ----------------------------------------------------------------------------------------------- #
+#
+@doc """
 	getNumberType(repr::AbstractNumberRepresentation)
 
 Get the number type of the number representation.
 """
-@inline getNumberType(::AbstractNumberRepresentation{T, U}) where {T, U} = T
+@inline getNumberType(::AbstractNumberRepresentation{T, U, S}) where {T, U, S} = T
 
 
 # ----------------------------------------------------------------------------------------------- #
@@ -221,7 +247,19 @@ Get the number type of the number representation.
 
 Get the notation type of the number representation.
 """
-@inline getNotationType(::AbstractNumberRepresentation{T, U}) where {T, U} = U
+@inline getNotationType(::AbstractNumberRepresentation{T, U, S}) where {T, U, S} = U
+
+
+# ----------------------------------------------------------------------------------------------- #
+#
+@doc """
+	getStringType(repr::AbstractNumberRepresentation)
+
+Get the "string" type of the number representation.
+Note that this is not necessarily a subtype of `AbstractString`.
+"""
+@inline getStringType(::AbstractNumberRepresentation{T, U, S}) where {T, U, S} = S
+
 
 
 # ----------------------------------------------------------------------------------------------- #
@@ -270,23 +308,11 @@ Modify the representation to include an explicit sign for the exponent.
 # Output
 . The modified `repr` with explicit sign for the exponent.
 """
-function showSignExponent!(repr::AbstractNumberRepresentation{T, FixedPointNotation}) where {T}
+function showSignExponent!(repr::AbstractNumberRepresentation{T, FixedPointNotation, S}) where {T, S}
 	return repr
 end
 
 function showSignExponent!(repr::NumberRepresentationPlain{T, U}) where {T, U <: Union{ScientificNotation, EngineeringNotation}}
-	# sig, exp = decomposeNumberFromString(repr.representation, getTimesSymbol(repr))
-	# if startswith(exp, "+") || startswith(exp, "-")
-	# 	return repr
-	# else
-	# 	if log10(abs(repr.number)) ≥ 0
-	# 		repr.representation = replace(repr.representation, getTimesSymbol(repr) => getTimesSymbol(repr) * "+")
-	# 	else
-	# 		repr.representation = replace(repr.representation, getTimesSymbol(repr) => getTimesSymbol(repr) * "-")
-	# 	end
-	# end
-	
-	# sign is always show in plain representation
 	return repr
 end
 
@@ -327,7 +353,7 @@ The function only shortens if the significand is approximately 1, within a toler
 # Output
 . The modified `repr` with shortened "1×10^n" to "10^n".
 """
-function shortenOneTimes!(repr::AbstractNumberRepresentation{T, FixedPointNotation}; args...) where {T}
+function shortenOneTimes!(repr::AbstractNumberRepresentation{T, FixedPointNotation, S}; args...) where {T, S}
 	return repr
 end
 
@@ -365,12 +391,12 @@ Modify the representation to shorten "B^0" to "1".
 # Output
 . The modified `repr` with shortened "B^0" to "1".
 """
-function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U}; args...) where {T, U <: FixedPointNotation}
+function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U, S}; args...) where {T, U <: FixedPointNotation, S}
 	# @warn("shortenBaseToZero! is not applicable for FixedPointNotation.")
 	return repr
 end
 
-function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U}; signSignificand::Bool = false, shortenOneTimes::Bool = false, ε::Real = default_ε) where {T, U <: Union{ScientificNotation, EngineeringNotation}}
+function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U, S}; signSignificand::Bool = false, shortenOneTimes::Bool = false, ε::Real = default_ε) where {T, U <: Union{ScientificNotation, EngineeringNotation}, S}
 	if isapprox(getExponent(repr.number), 0; atol = ε)
 		if shortenOneTimes && isapprox(getSignificand(repr.number), 1.; atol = ε)
 			nDecimals = getNumberOfDecimalsFromString(repr.representation, getTimesSymbol(repr))
