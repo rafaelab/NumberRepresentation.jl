@@ -36,7 +36,18 @@ jobs:
             julia-deps-${{ runner.os }}-
 
       - name: Install dependencies
-        run: julia --project -e 'using Pkg; Pkg.instantiate()'
+        run: |
+          julia --project -e '
+            using Pkg; 
+            Pkg.instantiate();
+            Pkg.precompile()
+          '
 
       - name: Run tests
-        run: julia --project -e 'using Pkg; Pkg.test()'
+        run: |
+          julia --project -e '
+            using Pkg; 
+            Pkg.add("Makie");
+            using Makie;
+            Pkg.test()
+          '
