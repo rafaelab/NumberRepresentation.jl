@@ -1,6 +1,6 @@
 name = "NumberRepresentation"
 uuid = "555dd0a5-fa5e-44e8-9057-a9c9c7431516"
-version = "0.5.0"
+version = "1.0.0"
 authors = ["Rafael Alves Batista <rafaelab@users.noreply.github.com>"]
 
 [deps]
