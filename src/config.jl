@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------------------------- #
 #
 @doc """
-	NumberRepresentationConfig{E <: Real, I <: Integer}
+	NumberRepresentationConfig{I <: Integer, E <: Real}
 
 Configuration struct for number representations.
 
@@ -13,7 +13,7 @@ Configuration struct for number representations.
 . `decimals` [`Integer`]: number of decimals of the significand \\
 . `toleranceShort` [`Real`]: tolerance for comparisons when shortening (absolute) \\
 """
-struct NumberRepresentationConfig{E  <: Real, I <: Integer}
+struct NumberRepresentationConfig{I <: Integer, E <: Real}
 	signSignificand::Bool
 	signExponent::Bool
 	shortenOneTimes::Bool
@@ -28,7 +28,7 @@ NumberRepresentationConfig(; signSignificand::Bool = false, signExponent::Bool =
 		@warn("Unknown keyword(s) for NumberRepresentationConfig: $(unknown). Ignoring it (them).")
 	end
 
-	return NumberRepresentationConfig{typeof(toleranceShort), typeof(decimals)}(signSignificand, signExponent, shortenOneTimes, shortenBaseToZero, decimals, toleranceShort)
+	return NumberRepresentationConfig{typeof(decimals), typeof(toleranceShort)}(signSignificand, signExponent, shortenOneTimes, shortenBaseToZero, decimals, toleranceShort)
 end
 
 NumberRepresentationConfig(d::Dict{Symbol, Any}) = begin
