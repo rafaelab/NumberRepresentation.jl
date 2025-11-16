@@ -90,14 +90,14 @@ end
 	@testset "shortenBaseToZero!" begin
 		repr1 = NumberRepresentationPlain(1.0, FixedPointNotation; decimals = 2, signSignificand = false)
 		before = repr1.representation
-		shortenBaseToZero!(repr1; signSignificand = false, shortenOneTimes = false)
+		shortenBaseToZero!(repr1)
 		@test repr1.representation == before
 	end
 
 	@testset "shortenBaseToZero! for FixedPoint is no-op" begin
-		repr1 = NumberRepresentationPlain(1.0, FixedPointNotation; decimals=2, signSignificand=false)
+		repr1 = NumberRepresentationPlain(1.0, FixedPointNotation; decimals = 2, signSignificand = false)
 		before = repr1.representation
-		shortenBaseToZero!(repr1; signSignificand = false, shortenOneTimes = false, ε = 1e-12)
+		shortenBaseToZero!(repr1)
 		@test repr1.representation == before
 	end
 
@@ -140,7 +140,7 @@ end
 	@testset "shortenOneTimes!" begin
 		repr1 = NumberRepresentationUnicode(1000.0; timesSymbol = "×", decimals = 1)
 		repr2 = NumberRepresentationUnicode(1000.0; timesSymbol = "×", decimals = 1)
-		shortenOneTimes!(repr1; ε = 1e-5)
+		shortenOneTimes!(repr1)
 		@test repr1.representation == "10³"
 		@test repr2.representation == "1.0×10³"
 
@@ -154,10 +154,10 @@ end
 		@test repr4.representation == "-10⁻³"
 		@test repr5.representation == "10⁻³"
 
-		repr6 = NumberRepresentationUnicode(1.00001e3; timesSymbol = "×", decimals = 5)
-		repr7 = NumberRepresentationUnicode(1.00001e3; timesSymbol = "×", decimals = 5)
-		shortenOneTimes!(repr6; ε = 1e-2)
-		shortenOneTimes!(repr7; ε = 1e-10)
+		repr6 = NumberRepresentationUnicode(1.00001e3; timesSymbol = "×", decimals = 5, shortenOneTimes = true, toleranceShort = 1e-3)
+		repr7 = NumberRepresentationUnicode(1.00001e3; timesSymbol = "×", decimals = 5, shortenOneTimes = false)
+		shortenOneTimes!(repr6)
+		shortenOneTimes!(repr7)
 		@test repr6.representation == "10³"
 		@test repr7.representation == "1.00001×10³"
 	end
@@ -194,22 +194,25 @@ end
 	end
 
 	@testset "constructor" begin
-		reprU1 = NumberRepresentationUnicode{Float64, ScientificNotation}(1e5, "1×10⁵", "×")
+		configU1 =  NumberRepresentationConfig(; decimals = 0)
+		reprU1 = NumberRepresentationUnicode(1e5, ScientificNotation, configU1)
 		reprT1 = NumberRepresentationTeX(reprU1)
 		@test occursin("\\times", reprT1.representation)
 		@test occursin("^{", reprT1.representation) && occursin("}", reprT1.representation)
 		@test ! occursin('⁵', reprT1.representation)
 		@test occursin("5", reprT1.representation)
 
-		reprU2 = NumberRepresentationUnicode{Float64, ScientificNotation}(-3.2e-4, "-3.2×10⁻⁴", "×")
+		configU2 = NumberRepresentationConfig(; shortenOneTimes = true, decimals = 1)
+		reprU2 = NumberRepresentationUnicode(-3.2e-4, ScientificNotation, configU2)
 		reprT2 = NumberRepresentationTeX(reprU2)
-		@test startswith(reprT2.representation, "-")
+		@test startswith(reprT2.representation, "−")
 		@test occursin("\\times", reprT2.representation)
 		@test occursin("^{", reprT2.representation) && occursin("}", reprT2.representation)
 		@test ! occursin('⁴', reprT2.representation)
 		@test occursin("-4", reprT2.representation)
 
-		reprU3 = NumberRepresentationUnicode{Float64, ScientificNotation}(5.3e2, "+5.3×10⁺²", "×")
+		configU3 = NumberRepresentationConfig(; signSignificand = true, signExponent = true, decimals = 1)
+		reprU3 = NumberRepresentationUnicode(5.3e2, ScientificNotation, configU3)
 		reprT3 = NumberRepresentationTeX(reprU3)
 		@test startswith(reprT3.representation, "+")
 		@test occursin("\\times", reprT3.representation)
@@ -219,13 +222,15 @@ end
 	end
 
 	@testset "custom times symbol" begin
-		reprU1 = NumberRepresentationUnicode{Float64, ScientificNotation}(1.0, "1×10²", "×")
-		reprT1 = NumberRepresentationTeX(reprU1, timesSymbol = "\\cdot")
-		@test reprT1.representation == "1 \\cdot 10^{2}"
+		configU1 = NumberRepresentationConfig(; decimals = 0)
+		reprU1 = NumberRepresentationUnicode(1.0, ScientificNotation, configU1; timesSymbol = "×")
+		reprT1 = NumberRepresentationTeX(reprU1; timesSymbol = "\\cdot")
+		@test reprT1.representation == "1 \\cdot 10^{0}"
 	end
 
 	@testset "string conversions" begin
-		reprU1 = NumberRepresentationUnicode{Float64, ScientificNotation}(1.234e6, "1.234×10⁶", "×")
+		configU1 = NumberRepresentationConfig(; decimals = 3)
+		reprU1 = NumberRepresentationUnicode(1.234e6, ScientificNotation, configU1)
 		reprT1 = NumberRepresentationTeX(reprU1)
 		@test occursin("\\times", reprT1.representation)
 		@test occursin("^{", reprT1.representation) && occursin("}", reprT1.representation)
