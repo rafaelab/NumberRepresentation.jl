@@ -1,10 +1,5 @@
 # ----------------------------------------------------------------------------------------------- #
 #
-# The default tolerance for approximations in functions like `shortenOneTimes!`, `shortenBaseToZero!`, etc.
-const default_ε = 1e-12
-
-# ----------------------------------------------------------------------------------------------- #
-#
 # Regex special characters set
 const regexSpecialChars = Set{Char}(
 	[
@@ -63,6 +58,8 @@ const superscriptSymbolsDictFrom = Dict{Char, Char}(
 	'⁻' => '-',
 	'·' => '.'
 )
+
+
 
 
 # ----------------------------------------------------------------------------------------------- #
