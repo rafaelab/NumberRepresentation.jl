@@ -206,45 +206,6 @@ end
 
 # ----------------------------------------------------------------------------------------------- #
 #
-# Meta-programming for defining redundant constructors.
-#
-# for T ∈ (:NumberRepresentationPlain, :NumberRepresentationTeX, :NumberRepresentationUnicode, :NumberRepresentationMakieRichText)
-# 	@eval begin 
-
-# 		function $(T)(number::Real, notation::AbstractNumberNotation, config::NumberRepresentationConfig; args...)
-# 			opts = haskey(args, :timesSymbol) ? (; (key => value for (key, value) ∈ args if key ≠ :timesSymbol)...) : args
-# 			return $(T)(number, typeof(notation), config; opts...)
-# 		end
-
-# 		function $(T)(number::Real, ::Type{U}; args...) where {U <: AbstractNumberNotation}
-# 			if haskey(args, :timesSymbol)
-# 				opts = (; (key => value for (key, value) ∈ args if key ≠ :timesSymbol)...)
-# 				config = NumberRepresentationConfig(; opts...)
-# 				return $(T)(number, U, config; timesSymbol = args[:timesSymbol])
-# 			else
-# 				config = NumberRepresentationConfig(; args...)
-# 				return $(T)(number, U, config)
-# 			end
-# 		end
-
-# 		function $(T)(number::Real, notation::AbstractNumberNotation; args...)
-# 			return $(T)(number, typeof(notation); args...)
-# 		end
-
-# 		function $(T)(number::Real; args...) 
-# 			return $(T)(number, ScientificNotation; args...)
-# 		end
-
-# 		Base.getproperty(repr::$(T), v::Symbol) = begin 
-# 			if v ∈ (:decimals, :signSignificand, :signExponent, :shortenOneTimes, :shortenBaseToZero, :toleranceShort)
-# 				return getfield(repr.config, v)
-# 			else
-# 				return getfield(repr, v)
-# 			end
-# 		end
-
-# 	end
-# end
 @doc """
     @buildNumberRepresentationConstructor TypeName
 
