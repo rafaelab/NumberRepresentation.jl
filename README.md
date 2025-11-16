@@ -1,6 +1,13 @@
 # NumberRepresentation.jl
 
 
+[![Build Status](https://github.com/rafaelab/NumberRepresentation.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/rafaelab/NumberRepresentation.jl/actions)
+[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://rafaelab.github.io/NumberRepresentation.jl/index.html)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+
+
+
 A small Julia library to format and manipulate numeric string representations of numbers, including scientific, engineering and fixed-point notations. 
 It provides types and helpers to produce and post-process strings like `1.23×10^3` or plain `1.23e+03`.
 
