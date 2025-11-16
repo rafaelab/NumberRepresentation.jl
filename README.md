@@ -2,7 +2,7 @@
 
 
 A small Julia library to format and manipulate numeric string representations of numbers, including scientific, engineering and fixed-point notations. 
-It provides types and helpers to produce and post-process strings like $1.23×10^3$ or plain `1.23e+03`.
+It provides types and helpers to produce and post-process strings like `1.23×10^3` or plain `1.23e+03`.
 
 
 ## Highlights
