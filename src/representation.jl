@@ -208,34 +208,90 @@ end
 #
 # Meta-programming for defining redundant constructors.
 #
-for T ∈ (:NumberRepresentationPlain, :NumberRepresentationTeX, :NumberRepresentationUnicode, :NumberRepresentationMakieRichText)
-	@eval begin 
+# for T ∈ (:NumberRepresentationPlain, :NumberRepresentationTeX, :NumberRepresentationUnicode, :NumberRepresentationMakieRichText)
+# 	@eval begin 
 
-		function $(T)(number::Real, notation::AbstractNumberNotation, config::NumberRepresentationConfig; args...)
+# 		function $(T)(number::Real, notation::AbstractNumberNotation, config::NumberRepresentationConfig; args...)
+# 			opts = haskey(args, :timesSymbol) ? (; (key => value for (key, value) ∈ args if key ≠ :timesSymbol)...) : args
+# 			return $(T)(number, typeof(notation), config; opts...)
+# 		end
+
+# 		function $(T)(number::Real, ::Type{U}; args...) where {U <: AbstractNumberNotation}
+# 			if haskey(args, :timesSymbol)
+# 				opts = (; (key => value for (key, value) ∈ args if key ≠ :timesSymbol)...)
+# 				config = NumberRepresentationConfig(; opts...)
+# 				return $(T)(number, U, config; timesSymbol = args[:timesSymbol])
+# 			else
+# 				config = NumberRepresentationConfig(; args...)
+# 				return $(T)(number, U, config)
+# 			end
+# 		end
+
+# 		function $(T)(number::Real, notation::AbstractNumberNotation; args...)
+# 			return $(T)(number, typeof(notation); args...)
+# 		end
+
+# 		function $(T)(number::Real; args...) 
+# 			return $(T)(number, ScientificNotation; args...)
+# 		end
+
+# 		Base.getproperty(repr::$(T), v::Symbol) = begin 
+# 			if v ∈ (:decimals, :signSignificand, :signExponent, :shortenOneTimes, :shortenBaseToZero, :toleranceShort)
+# 				return getfield(repr.config, v)
+# 			else
+# 				return getfield(repr, v)
+# 			end
+# 		end
+
+# 	end
+# end
+@doc """
+    @buildNumberRepresentationConstructor TypeName
+
+Generate a set of convenience constructors and a `getproperty` fallback for a concrete NumberRepresentation type. 
+The methods generated are: \\
+- `TypeName(number::Real, notation::AbstractNumberNotation, config::NumberRepresentationConfig; args...)`: \\
+	. Normalises keyword args so `:timesSymbol` (if present) is passed as a keyword to the final constructor while other keys are used to build a `NumberRepresentationConfig`. \\
+- `TypeName(number::Real, ::Type{U}; args...) where {U <: AbstractNumberNotation}`: \\
+	. Accepts a notation type directly; if `:timesSymbol` is present it is forwarded as a keyword and other args are used to construct `NumberRepresentationConfig`. \\
+- `TypeName(number::Real, notation::AbstractNumberNotation; args...)`: \\
+	. Dispatches to the `::Type{U}` form using `typeof(notation)`. \\
+- `TypeName(number::Real; args...)`: \\
+	. Shorthand that defaults to `ScientificNotation` when no notation is provided. \\
+- `Base.getproperty(repr::TypeName, v::Symbol)`: \\
+	. Forwards access to selected config fields `(:decimals, :signSignificand, :signExponent, :shortenOneTimes, :shortenBaseToZero, :toleranceShort)` to `repr.config`, otherwise returns the field from `repr`.
+
+# Notes
+- Call the macro with a literal type identifier (e.g. `@buildNumberRepresentationConstructor NumberRepresentationPlain` or `@buildNumberRepresentationConstructor(NumberRepresentationPlain)`). Do not pass a runtime variable. \\
+- The macro uses `esc` to splice the provided type into generated code so it produces methods for the named type.
+"""
+macro buildNumberRepresentationConstructor(T)
+	quote
+		function $(esc(T))(number::Real, notation::AbstractNumberNotation, config::NumberRepresentationConfig; args...)
 			opts = haskey(args, :timesSymbol) ? (; (key => value for (key, value) ∈ args if key ≠ :timesSymbol)...) : args
-			return $(T)(number, typeof(notation), config; opts...)
+			return $(esc(T))(number, typeof(notation), config; opts...)
 		end
 
-		function $(T)(number::Real, ::Type{U}; args...) where {U <: AbstractNumberNotation}
+		function $(esc(T))(number::Real, ::Type{U}; args...) where {U <: AbstractNumberNotation}
 			if haskey(args, :timesSymbol)
 				opts = (; (key => value for (key, value) ∈ args if key ≠ :timesSymbol)...)
 				config = NumberRepresentationConfig(; opts...)
-				return $(T)(number, U, config; timesSymbol = args[:timesSymbol])
+				return $(esc(T))(number, U, config; timesSymbol = args[:timesSymbol])
 			else
 				config = NumberRepresentationConfig(; args...)
-				return $(T)(number, U, config)
+				return $(esc(T))(number, U, config)
 			end
 		end
 
-		function $(T)(number::Real, notation::AbstractNumberNotation; args...)
-			return $(T)(number, typeof(notation); args...)
+		function $(esc(T))(number::Real, notation::AbstractNumberNotation; args...)
+			return $(esc(T))(number, typeof(notation); args...)
 		end
 
-		function $(T)(number::Real; args...) 
-			return $(T)(number, ScientificNotation; args...)
+		function $(esc(T))(number::Real; args...)
+			return $(esc(T))(number, ScientificNotation; args...)
 		end
 
-		Base.getproperty(repr::$(T), v::Symbol) = begin 
+		Base.getproperty(repr::$(esc(T)), v::Symbol) = begin
 			if v ∈ (:decimals, :signSignificand, :signExponent, :shortenOneTimes, :shortenBaseToZero, :toleranceShort)
 				return getfield(repr.config, v)
 			else
@@ -244,7 +300,17 @@ for T ∈ (:NumberRepresentationPlain, :NumberRepresentationTeX, :NumberRepresen
 		end
 
 	end
+
 end
+
+# build constructors
+@buildNumberRepresentationConstructor(NumberRepresentationPlain)
+@buildNumberRepresentationConstructor(NumberRepresentationUnicode)
+@buildNumberRepresentationConstructor(NumberRepresentationTeX)
+
+## this constructor, while logical, requires Makie, so it is placed in the extension file
+# @buildNumberRepresentationConstructor(NumberRepresentationMakieRichText)
+
 
 
 # ----------------------------------------------------------------------------------------------- #
