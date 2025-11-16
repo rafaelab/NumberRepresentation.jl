@@ -8,38 +8,36 @@ import NumberRepresentation:
 	AbstractNumberRepresentation,
 	AbstractNumberNotation,
 	NumberRepresentationMakieRichText,
-	superscriptSymbolsDictFrom
+	superscriptSymbolsDictFrom,
+	@buildNumberRepresentationConstructor
 
 
 
 # ----------------------------------------------------------------------------------------------- #
 #
-NumberRepresentationMakieRichText(representation::NumberRepresentationUnicode{T, U}) where {T, U <:  FixedPointNotation} = begin
-	str = rich(representation.representation)
-	return NumberRepresentationMakieRichText{T, U, typeof(str)}(representation.number, str, representation.timesSymbol)
+NumberRepresentationMakieRichText(repr::NumberRepresentationUnicode{T, U}; timesSymbol::String = "×") where {T, U <:  FixedPointNotation} = begin
+	str = replace(repr.representation, repr.timesSymbol => timesSymbol)
+	str = rich(str)
+	return NumberRepresentationMakieRichText{T, U, typeof(str)}(repr.number, str, repr.config, timesSymbol)
 end
 
 
-NumberRepresentationMakieRichText(representation::NumberRepresentationUnicode{T, U}) where {T, U <: Union{ScientificNotation, EngineeringNotation}} = begin
-	sig, exp = decomposeNumberFromString(representation.representation, representation.timesSymbol)
+NumberRepresentationMakieRichText(repr::NumberRepresentationUnicode{T, U}; timesSymbol::String = "×") where {T, U <: Union{ScientificNotation, EngineeringNotation}} = begin
+	sig, exp = decomposeNumberFromString(repr.representation, repr.timesSymbol)
 	exp = replace(exp, "10" => "")
 	exp = join(get(superscriptSymbolsDictFrom, c, string(c)) for c ∈ exp) 
-	str = rich(sig, representation.timesSymbol, "10", superscript(exp))
-	return NumberRepresentationMakieRichText{T, U, typeof(str)}(representation.number, str, representation.timesSymbol)
+	str = rich(sig, timesSymbol, "10", superscript(exp))
+	return NumberRepresentationMakieRichText{T, U, typeof(str)}(repr.number, str, repr.config, timesSymbol)
 end
 
-NumberRepresentationMakieRichText(number::Real; args...) = begin
-	repr = NumberRepresentationUnicode(number; args...)
-	return NumberRepresentationMakieRichText(repr)
+
+NumberRepresentationMakieRichText(number::Real, ::Type{U}, config::NumberRepresentationConfig; timesSymbol::String = "×") where {U <: AbstractNumberNotation} = begin
+	reprU = NumberRepresentationUnicode(number, U, config)
+	return NumberRepresentationMakieRichText(reprU; timesSymbol = timesSymbol)
 end
 
-NumberRepresentationMakieRichText(number::Real, ::Type{U}; args...) where {U <: AbstractNumberNotation} = begin
-	return NumberRepresentationMakieRichText(NumberRepresentationUnicode(number, U; args...))
-end
+@buildNumberRepresentationConstructor(NumberRepresentationMakieRichText)
 
-NumberRepresentationMakieRichText(number::Real, notation::AbstractNumberNotation; args...) = begin
-	return NumberRepresentationMakieRichText(number, typeof(notation); args...)
-end
 
 # ----------------------------------------------------------------------------------------------- #
 #
