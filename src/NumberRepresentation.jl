@@ -1,6 +1,7 @@
 module NumberRepresentation
 
 export 
+	NumberRepresentationConfig,
 	FixedPointNotation,
 	ScientificNotation,
 	EngineeringNotation,
@@ -26,6 +27,7 @@ include("common.jl")
 include("regex.jl")
 include("number.jl")
 include("parser.jl")
+include("config.jl")
 include("notation.jl")
 include("representation.jl")
 
