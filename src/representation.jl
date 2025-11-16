@@ -225,10 +225,6 @@ mutable struct NumberRepresentationMakieRichText{T, U, S} <: AbstractNumberRepre
 	timesSymbol::String
 end
 
-NumberRepresentationMakieRichText(number::Real; args...) = begin
-	return NumberRepresentationMakieRichText(number, ScientificNotation; args...)
-end
-
 
 # ----------------------------------------------------------------------------------------------- #
 #

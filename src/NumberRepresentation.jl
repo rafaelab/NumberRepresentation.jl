@@ -7,6 +7,7 @@ export
 	NumberRepresentationPlain,
 	NumberRepresentationUnicode,
 	NumberRepresentationTeX,
+	NumberRepresentationMakieRichText,
 	getSignificand,
 	getExponent,
 	decomposeNumberFromString,
@@ -18,6 +19,7 @@ export
 
 using Printf
 using NumericIO
+using Requires
 
 
 include("common.jl")
@@ -26,6 +28,7 @@ include("number.jl")
 include("parser.jl")
 include("notation.jl")
 include("representation.jl")
+
 
 
 end 
