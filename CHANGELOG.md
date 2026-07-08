@@ -2,7 +2,11 @@
 
 
 
+----
+## [1.0.6]
 
+## Fixed
+- Fixed bug related to keyword-provided configuration, which was leading to `NumberRepresentationTeX` to ignore decimals.
 
 
 ---

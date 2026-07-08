@@ -235,7 +235,14 @@ macro buildNumberRepresentationConstructor(T)
 		end
 
 		$(esc(T))(number::Real, ::Type{U}; args...) where {U <: AbstractNumberNotation} = begin
-			if haskey(args, :timesSymbol)
+			if haskey(args, :config)
+				opts = (; (key => value for (key, value) ∈ args if key ∉ (:config, :timesSymbol))...)
+				if ! isempty(opts) 
+					throw(ArgumentError("Cannot combine `config` keyword with other configuration keyword(s): $(join(keys(opts), ", ")). Pass a fully constructed `NumberRepresentationConfig` via `config`, or pass individual keywords instead."))
+				end
+				config = args[:config]
+				return haskey(args, :timesSymbol) ? $(esc(T))(number, U, config; timesSymbol = args[:timesSymbol]) : $(esc(T))(number, U, config)
+			elseif haskey(args, :timesSymbol)
 				opts = (; (key => value for (key, value) ∈ args if key ≠ :timesSymbol)...)
 				config = NumberRepresentationConfig(; opts...)
 				return $(esc(T))(number, U, config; timesSymbol = args[:timesSymbol])

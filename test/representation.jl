@@ -241,6 +241,22 @@ end
 		@test parse(Int, digits) % 3 - 1 == 0
 	end
 
+	@testset "config keyword" begin
+		config = NumberRepresentationConfig(; decimals = 2)
+
+		repr1 = NumberRepresentationTeX(12.34567; config = config)
+		@test repr1.decimals == 2
+		@test repr1.representation == "1.23 \\times 10^{1}"
+
+		repr2 = NumberRepresentationTeX(12.34567, FixedPointNotation; config = config)
+		@test repr2.representation == "12.35"
+
+		repr3 = NumberRepresentationTeX(12.34567, ScientificNotation(); config = config, timesSymbol = "\\cdot")
+		@test repr3.representation == "1.23 \\cdot 10^{1}"
+
+		@test_throws ArgumentError NumberRepresentationTeX(12.34567; config = config, decimals = 9)
+	end
+
 end
 
 # ---------------------------------------------------------------------------------- #
