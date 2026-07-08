@@ -37,7 +37,7 @@ Pkg.instantiate()
 using NumberRepresentation
 
 # create a Unicode scientific representation
-r = NumberRepresentationUnicode(1200.0, ScientificNotation; decimals=2, timesSymbol="×")
+r = NumberRepresentationUnicode(1200.0, ScientificNotation; decimals = 2, timesSymbol = "×")
 println(r.representation) # -> "1.20×10³"
 
 # decompose and parse strings
