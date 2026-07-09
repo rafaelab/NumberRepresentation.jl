@@ -5,6 +5,11 @@
 
 Configuration struct for number representations.
 
+The same configuration object is shared by plain, Unicode, TeX, and Makie rich-text representations. 
+The most important option is `decimals`: it denotes the number of digits after the decimal point in the significand. 
+It is not the total number of significant digits. 
+For instance, `decimals = 2` gives `1.23×10³` in scientific notation and `12.35×10³` in engineering notation.
+
 # Fields
 - `signSignificand` [`Bool`]: whether to print the significand's sign
 - `signExponent` [`Bool`]: whether to print the exponent's sign
@@ -12,6 +17,19 @@ Configuration struct for number representations.
 - `shortenBaseToZero` [`Bool`]: whether to write numbers like B^0 as 1
 - `decimals` [`Integer`]: number of decimals of the significand
 - `toleranceShort` [`Real`]: tolerance for comparisons when shortening (absolute)
+
+# Examples
+```jldoctest
+julia> cfg = NumberRepresentationConfig(; decimals = 2, signExponent = true);
+
+julia> NumberRepresentationUnicode(1200.0, ScientificNotation, cfg).representation
+"1.20×10⁺³"
+
+julia> cfg = NumberRepresentationConfig(; decimals = 1, shortenOneTimes = true);
+
+julia> NumberRepresentationTeX(1000.0, ScientificNotation, cfg).representation
+"10^{3}"
+```
 """
 struct NumberRepresentationConfig{I <: Integer, E <: Real}
 	signSignificand::Bool
