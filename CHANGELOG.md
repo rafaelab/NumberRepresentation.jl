@@ -3,6 +3,17 @@
 
 
 ----
+## [1.0.7]
+
+## Fixed
+- Fixed engineering-notation TeX representations to honour the requested number of significand decimals, including negative values and rounding across engineering exponents.
+- Added regression tests for engineering-notation TeX significant-digit handling.
+
+## Documentation
+- Improved code documentation for number helpers, representation types, configuration options, and engineering-notation formatting, with doctested examples.
+
+
+----
 ## [1.0.6]
 
 ## Fixed
