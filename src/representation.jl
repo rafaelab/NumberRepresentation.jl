@@ -19,12 +19,25 @@ abstract type AbstractNumberRepresentation{T <: Real, U <: AbstractNumberNotatio
 	NumberRepresentationPlain{T, U}
 
 Defines a number representation in plain string format.
-This is the direct output of NumericIO formatting.
+
+Plain representations are intended for compact, ASCII-compatible output. Fixed-point and scientific notation use `Printf` formatting, while engineering notation follows the package's engineering exponent convention and uses `e` as the default separator.
+
+# Configuration
+The `decimals` option means the number of digits after the decimal point in the significand. For example, `decimals = 2` gives `1.23e+03` in scientific notation.
 
 # Fields
 - `number` [`Real`]: the number being represented
 - `representation` [`String`]: the string representation of the number
 - `timesSymbol` [`String`]: the multiplication symbol used in the representation
+
+# Examples
+```jldoctest
+julia> NumberRepresentationPlain(1234.567, ScientificNotation; decimals = 2).representation
+"1.23e+03"
+
+julia> NumberRepresentationPlain(12.345, FixedPointNotation; decimals = 1).representation
+"12.3"
+```
 """
 mutable struct NumberRepresentationPlain{T, U, S} <: AbstractNumberRepresentation{T, U, S}
 	number::T
@@ -77,16 +90,90 @@ end
 
 Defines a number representation in unicode string format.
 
+Unicode representations use readable mathematical symbols, such as `×` for multiplication and superscript characters for exponents. They are useful for labels, terminal output, and as the intermediate representation used by `NumberRepresentationTeX`.
+
+# Configuration
+The `decimals` option controls the number of digits after the decimal point in the significand, not the total number of significant digits. In engineering notation, the exponent is a multiple of three and the significand is rounded with the requested number of decimal places.
+
 # Fields
 - `number` [`Real`]: the number being represented
 - `representation` [`String`]: the string representation of the number
 - `timesSymbol` [`String`]: the multiplication symbol used in the representation
+
+# Examples
+```jldoctest
+julia> NumberRepresentationUnicode(1234.567, ScientificNotation; decimals = 2).representation
+"1.23×10³"
+
+julia> NumberRepresentationUnicode(12345.67, EngineeringNotation; decimals = 2).representation
+"12.35×10³"
+
+julia> NumberRepresentationUnicode(999.9, EngineeringNotation; decimals = 0).representation
+"1×10³"
+```
 """
 mutable struct NumberRepresentationUnicode{T, U} <: AbstractNumberRepresentation{T, U, String}
 	number::T
 	representation::String
 	config::NumberRepresentationConfig
 	timesSymbol::String
+end
+
+@doc """
+	formatSuperscriptInteger(n::Integer)
+
+Convert an integer exponent to Unicode superscript characters.
+
+This is an internal helper used by Unicode and TeX-facing engineering formatting. Negative exponents use the Unicode superscript minus sign.
+
+# Examples
+```jldoctest
+julia> NumberRepresentation.formatSuperscriptInteger(-12)
+"⁻¹²"
+
+julia> NumberRepresentation.formatSuperscriptInteger(3)
+"³"
+```
+"""
+function formatSuperscriptInteger(n::Integer)
+	sign = n < 0 ? string(superscriptSymbolsDictTo['-']) : ""
+	digits = join(superscriptSymbolsDictTo[c] for c ∈ string(abs(n)))
+	return sign * digits
+end
+
+@doc """
+	formatEngineeringUnicode(number::Real, config::NumberRepresentationConfig, timesSymbol::Union{String, Char})
+
+Format `number` in Unicode engineering notation.
+
+Engineering notation constrains the exponent to a multiple of three. This helper computes that exponent, rounds the significand to `config.decimals` digits after the decimal point, and normalises rounded values that cross the engineering boundary. For instance, `999.9` with zero decimals becomes `1×10³`, not `1000×10⁰`.
+
+# Examples
+```jldoctest
+julia> cfg = NumberRepresentationConfig(; decimals = 2);
+
+julia> NumberRepresentation.formatEngineeringUnicode(12345.67, cfg, "×")
+"12.35×10³"
+
+julia> NumberRepresentation.formatEngineeringUnicode(-999.9, NumberRepresentationConfig(; decimals = 0), "×")
+"−1×10³"
+```
+"""
+function formatEngineeringUnicode(number::Real, config::NumberRepresentationConfig, timesSymbol::Union{String, Char})
+	exponent = number == 0 ? 0 : 3 * fld(Int(getExponent(number)), 3)
+	significand = number / exp10(exponent)
+	significandRounded = round(significand; digits = config.decimals)
+
+	if abs(significandRounded) ≥ 1000
+		significandRounded /= 1000
+		exponent += 3
+	end
+
+	sign = significandRounded < 0 ? "−" : (config.signSignificand ? "+" : "")
+	fmt = "%.$(config.decimals)f"
+	significandStr = sign * Printf.format(Printf.Format(fmt), abs(significandRounded))
+
+	return "$(significandStr)$(timesSymbol)10$(formatSuperscriptInteger(exponent))"
 end
 
 
@@ -107,10 +194,8 @@ NumberRepresentationUnicode(number::Real, ::Type{ScientificNotation}, config::Nu
 end
 
 NumberRepresentationUnicode(number::Real, ::Type{EngineeringNotation}, config::NumberRepresentationConfig; timesSymbol::Union{String, Char} = "×") = begin
-	str0 = formatted(number, :ENG)
-	nIntegers = getNumberOfIntegersFromString(str0, timesSymbol)
-	str = formatted(number, :ENG; ndigits = config.decimals + nIntegers + 1)
-	repr = NumberRepresentationUnicode{typeof(number), ScientificNotation}(number, str, config, timesSymbol)
+	str = formatEngineeringUnicode(number, config, timesSymbol)
+	repr = NumberRepresentationUnicode{typeof(number), EngineeringNotation}(number, str, config, timesSymbol)
 	updateRepresentation!(repr)
 	return repr
 end
@@ -124,10 +209,27 @@ end
 
 Defines a number representation in TeX string format.
 
+TeX representations are built by first formatting the number as `NumberRepresentationUnicode` and then translating Unicode superscripts into TeX exponent groups. The default multiplication symbol is `\\times`, and it can be replaced with symbols such as `\\cdot`.
+
+# Configuration
+The `decimals` option controls the number of digits after the decimal point in the significand. This applies consistently to scientific and engineering notation.
+
 # Fields
 - `number` [`Real`]: the number being represented
 - `representation` [`String`]: the string representation of the number
 - `timesSymbol` [`String`]: the multiplication symbol used in the representation
+
+# Examples
+```jldoctest
+julia> NumberRepresentationTeX(1234.567, ScientificNotation; decimals = 2).representation
+"1.23 \\\\times 10^{3}"
+
+julia> NumberRepresentationTeX(12345.67, EngineeringNotation; decimals = 2).representation
+"12.35 \\\\times 10^{3}"
+
+julia> NumberRepresentationTeX(1234.567, ScientificNotation; decimals = 2, timesSymbol = "\\\\cdot").representation
+"1.23 \\\\cdot 10^{3}"
+```
 """
 mutable struct NumberRepresentationTeX{T, U} <: AbstractNumberRepresentation{T, U, String}
 	number::T
@@ -139,7 +241,6 @@ end
 NumberRepresentationTeX(number::Real, ::Type{U}, config::NumberRepresentationConfig; timesSymbol::String = "\\times") where {U <: AbstractNumberNotation} = begin
 	return NumberRepresentationTeX(NumberRepresentationUnicode(number, U, config); timesSymbol = timesSymbol)
 end
-
 
 NumberRepresentationTeX(reprU::NumberRepresentationUnicode; timesSymbol::String = "\\times") = begin
 	number = reprU.number
@@ -337,7 +438,7 @@ Modify the representation to include an explicit sign for the significand.
 - `repr` [`NumberRepresentationPlain`]: the number representation to modify
 """
 function showSignSignificand!(repr::AbstractNumberRepresentation)
-	if startswith(repr.representation, '+') || startswith(repr.representation, '-')
+	if startswith(repr.representation, '+') || startswith(repr.representation, '-') || startswith(repr.representation, '−')
 		return repr
 	end
 	repr.representation = (repr.number ≥ 0 ? "+" : "-") * repr.representation
@@ -410,7 +511,7 @@ function shortenOneTimes!(repr::NumberRepresentationUnicode{T, U}) where {T, U <
 
 	if ! isnothing(expStr) && isapprox(abs(getSignificand(repr.number)), 1.; atol = repr.toleranceShort)
 		repr.representation = expStr
-		s = occursin("-", sigStr) ? "-" : (occursin("+", sigStr) ? "+" : "")
+		s = repr.signSignificand ? (occursin("-", sigStr) || occursin("−", sigStr) ? "-" : (occursin("+", sigStr) ? "+" : "")) : ""
 		repr.representation = s * repr.representation
 	end
 
