@@ -228,6 +228,21 @@ end
 		@test reprT1.representation == "1 \\cdot 10^{0}"
 	end
 
+	@testset "engineering significand decimals" begin
+		@test getNotationType(NumberRepresentationUnicode(12345.67, EngineeringNotation; decimals = 2)) == EngineeringNotation
+		@test getNotationType(NumberRepresentationTeX(12345.67, EngineeringNotation; decimals = 2)) == EngineeringNotation
+		@test NumberRepresentationTeX(1000.0, EngineeringNotation; decimals = 0).representation == "1 \\times 10^{3}"
+		@test NumberRepresentationTeX(1000.0, EngineeringNotation; decimals = 2).representation == "1.00 \\times 10^{3}"
+		@test NumberRepresentationTeX(12345.67, EngineeringNotation; decimals = 0).representation == "12 \\times 10^{3}"
+		@test NumberRepresentationTeX(12345.67, EngineeringNotation; decimals = 2).representation == "12.35 \\times 10^{3}"
+		@test NumberRepresentationTeX(999.9, EngineeringNotation; decimals = 0).representation == "1 \\times 10^{3}"
+		@test NumberRepresentationTeX(999.9, EngineeringNotation; decimals = 2).representation == "999.90 \\times 10^{0}"
+		@test NumberRepresentationTeX(-12345.67, EngineeringNotation; decimals = 0).representation == "−12 \\times 10^{3}"
+		@test NumberRepresentationTeX(-12345.67, EngineeringNotation; decimals = 2).representation == "−12.35 \\times 10^{3}"
+		@test NumberRepresentationTeX(-999.9, EngineeringNotation; decimals = 0).representation == "−1 \\times 10^{3}"
+		@test NumberRepresentationTeX(-999.9, EngineeringNotation; decimals = 2).representation == "−999.90 \\times 10^{0}"
+	end
+
 	@testset "string conversions" begin
 		configU1 = NumberRepresentationConfig(; decimals = 3)
 		reprU1 = NumberRepresentationUnicode(1.234e6, ScientificNotation, configU1)
@@ -260,6 +275,3 @@ end
 end
 
 # ---------------------------------------------------------------------------------- #
-
-
-
