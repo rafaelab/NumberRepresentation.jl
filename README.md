@@ -41,8 +41,8 @@ r = NumberRepresentationUnicode(1200.0, ScientificNotation; decimals = 2, timesS
 println(r.representation) # -> "1.20×10³"
 
 # decompose and parse strings
-(sig, exp) = decomposeNumberString("1.23×4", "×")
-x = parseNumberString("1.2e3", "e") # -> 1200.0
+(sig, exp) = decomposeNumberFromString("1.23×4", "×")
+x = parseNumberFromString("1.2e3", "e") # -> 1200.0
 
 # get significand/exponent
 s = getSignificand(12345.0)
@@ -59,11 +59,11 @@ e = getExponent(12345.0)
 - Utilities
   - getSignificand(number)
   - getExponent(number)
-  - decomposeNumberString(str, timesSymbol)
-  - parseNumberString(str, timesSymbol[, ::Type])
-  - showSignSignificand!(repr)
-  - showSignExponent!(repr)
-  - shortenOneTimes!(repr; ε = ...)
+  - decomposeNumberFromString(str, timesSymbol)
+  - parseNumberFromString(str, timesSymbol[, ::Type])
+  - NumberRepresentation.showSignSignificand!(repr)
+  - NumberRepresentation.showSignExponent!(repr)
+  - NumberRepresentation.shortenOneTimes!(repr) (tolerance set through `NumberRepresentationConfig(toleranceShort = ...)`)
 
 See source files in `src/` for full API details and options.
 
