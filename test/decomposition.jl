@@ -33,9 +33,17 @@
 		# when no times symbol is present the result is parsed as the requested type
 		@test parseNumberFromString(" 42 ", "×", Int64) === 42
 
-		# when a times symbol is present the implementation currently returns a Float64
+		# preserve the requested numeric type and precision
 		@test typeof(parseNumberFromString("1e3", "e", Float64)) == Float64
 		@test parseNumberFromString("3", "e") == 3.
+		@test parseNumberFromString("9007199254740993", "e", Int64) === 9007199254740993
+		@test parseNumberFromString("42.0", "e", Int64) === 42
+		@test parseNumberFromString("9007199254740993e1", "e", Int64) === 90071992547409930
+		@test parseNumberFromString("1.2e3", "e", Int64) === 1200
+		@test parseNumberFromString("120e-1", "e", Int64) === 12
+		@test_throws InexactError parseNumberFromString("1.2e0", "e", Int64)
+		@test parseNumberFromString("1.2345678901234567890123456789", "e", BigFloat) == big"1.2345678901234567890123456789"
+		@test parseNumberFromString("1.2345678901234567890123456789 × 400", "×", BigFloat) == big"1.2345678901234567890123456789e400"
 	end
 
 end

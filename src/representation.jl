@@ -65,17 +65,10 @@ NumberRepresentationPlain(number::Real, ::Type{ScientificNotation}, config::Numb
 end
 
 NumberRepresentationPlain(number::Real, ::Type{EngineeringNotation}, config::NumberRepresentationConfig; timesSymbol::String = "e") = begin
-	s0 = formatted(number, :ENG)
-	parts = split(split(s0, "×")[1], ".")
-	if length(parts) == 1
-		nDigits = 0
-	else
-		nDigits = config.decimals + length(@sprintf("%.0f", number / (exp10(NumericIO.base10exp(number))))) + 1
-	end
-
-	s1 = formatted(number, :ENG; ndigits = nDigits)
+	s1 = formatEngineeringUnicode(number, config, "×")
 	sig, exp = decomposeNumberFromString(s1, "×")
-
+	sig = replace(sig, '−' => '-')
+	exp = join(superscriptSymbolsDictFrom[c] for c ∈ exp[3:end])
 	s = "$(sig)e$(exp)"
 	repr = NumberRepresentationPlain{typeof(number), EngineeringNotation, String}(number, s, timesSymbol, config)
 	updateRepresentation!(repr)
@@ -161,7 +154,11 @@ julia> NumberRepresentation.formatEngineeringUnicode(-999.9, NumberRepresentatio
 """
 function formatEngineeringUnicode(number::Real, config::NumberRepresentationConfig, timesSymbol::Union{String, Char})
 	exponent = number == 0 ? 0 : 3 * fld(Int(getExponent(number)), 3)
-	significand = number / exp10(exponent)
+	scale = exp10(promote_type(Float64, typeof(number))(exponent))
+	if iszero(scale) || ! isfinite(scale)
+		scale = exp10(BigFloat(exponent))
+	end
+	significand = number / scale
 	significandRounded = round(significand; digits = config.decimals)
 
 	if abs(significandRounded) ≥ 1000
@@ -180,22 +177,22 @@ end
 NumberRepresentationUnicode(number::Real, ::Type{FixedPointNotation}, config::NumberRepresentationConfig; timesSymbol::Union{String, Char} = "×") = begin
 	fmt = config.signSignificand ? "%+.$(config.decimals)f" : "%.$(config.decimals)f"
 	str = Printf.format(Printf.Format(fmt), number)
-	repr = NumberRepresentationUnicode{typeof(number), FixedPointNotation}(number, str, config, timesSymbol)
+	repr = NumberRepresentationUnicode{typeof(number), FixedPointNotation}(number, str, config, string(timesSymbol))
 	updateRepresentation!(repr)
 
 	return repr
 end	
 
 NumberRepresentationUnicode(number::Real, ::Type{ScientificNotation}, config::NumberRepresentationConfig; timesSymbol::Union{String, Char} = "×") = begin
-	str = formatted(number, :SCI; ndigits = config.decimals + 1)
-	repr = NumberRepresentationUnicode{typeof(number), ScientificNotation}(number, str, config, timesSymbol)
+	str = replace(formatted(number, :SCI; ndigits = config.decimals + 1), "×" => string(timesSymbol))
+	repr = NumberRepresentationUnicode{typeof(number), ScientificNotation}(number, str, config, string(timesSymbol))
 	updateRepresentation!(repr)
 	return repr
 end
 
 NumberRepresentationUnicode(number::Real, ::Type{EngineeringNotation}, config::NumberRepresentationConfig; timesSymbol::Union{String, Char} = "×") = begin
 	str = formatEngineeringUnicode(number, config, timesSymbol)
-	repr = NumberRepresentationUnicode{typeof(number), EngineeringNotation}(number, str, config, timesSymbol)
+	repr = NumberRepresentationUnicode{typeof(number), EngineeringNotation}(number, str, config, string(timesSymbol))
 	updateRepresentation!(repr)
 	return repr
 end
@@ -209,10 +206,12 @@ end
 
 Defines a number representation in TeX string format.
 
-TeX representations are built by first formatting the number as `NumberRepresentationUnicode` and then translating Unicode superscripts into TeX exponent groups. The default multiplication symbol is `\\times`, and it can be replaced with symbols such as `\\cdot`.
+TeX representations are built by first formatting the number as `NumberRepresentationUnicode` and then translating Unicode superscripts into TeX exponent groups. 
+The default multiplication symbol is `\\times`, and it can be replaced with symbols such as `\\cdot`.
 
 # Configuration
-The `decimals` option controls the number of digits after the decimal point in the significand. This applies consistently to scientific and engineering notation.
+The `decimals` option controls the number of digits after the decimal point in the significand. 
+This applies consistently to scientific and engineering notation.
 
 # Fields
 - `number` [`Real`]: the number being represented
@@ -245,7 +244,7 @@ end
 NumberRepresentationTeX(reprU::NumberRepresentationUnicode; timesSymbol::String = "\\times") = begin
 	number = reprU.number
 	config = reprU.config
-	s = reprU.representation
+	s = replace(reprU.representation, reprU.timesSymbol => "×")
 	U = getNotationType(reprU)
 
 
@@ -314,7 +313,7 @@ end
 Generate a set of convenience constructors and a `getproperty` fallback for a concrete NumberRepresentation type. 
 The methods generated are:
 - `TypeName(number::Real, notation::AbstractNumberNotation, config::NumberRepresentationConfig; args...)`:
-	- Normalises keyword args so `:timesSymbol` (if present) is passed as a keyword to the final constructor while other keys are used to build a `NumberRepresentationConfig`.
+	- Forwards the configuration and keyword args, including `:timesSymbol`, to the notation-type constructor.
 - `TypeName(number::Real, ::Type{U}; args...) where {U <: AbstractNumberNotation}`:
 	- Accepts a notation type directly; if `:timesSymbol` is present it is forwarded as a keyword and other args are used to construct `NumberRepresentationConfig`.
 - `TypeName(number::Real, notation::AbstractNumberNotation; args...)`:
@@ -331,8 +330,7 @@ The methods generated are:
 macro buildNumberRepresentationConstructor(T)
 	quote
 		$(esc(T))(number::Real, notation::AbstractNumberNotation, config::NumberRepresentationConfig; args...) = begin
-			opts = haskey(args, :timesSymbol) ? (; (key => value for (key, value) ∈ args if key ≠ :timesSymbol)...) : args
-			return $(esc(T))(number, typeof(notation), config; opts...)
+			return $(esc(T))(number, typeof(notation), config; args...)
 		end
 
 		$(esc(T))(number::Real, ::Type{U}; args...) where {U <: AbstractNumberNotation} = begin
@@ -471,9 +469,9 @@ function showSignExponent!(repr::NumberRepresentationUnicode{T, U}) where {T, U 
 	if occursin("⁺", exponent) || occursin("⁻", exponent)
 		return repr
 	end
-	superscriptSign = log10(abs(repr.number)) ≥ 0 ? '⁺' : '⁻'
+	superscriptSign = '⁺'
 
-	pattern = Regex("(" * escape_string(repr.timesSymbol) * "10)[\\+\\-]?(.*)", "s")
+	pattern = Regex("(" * escapeRegexLiteral(repr.timesSymbol) * "10)[\\+\\-]?(.*)", "s")
 	matched = match(pattern, repr.representation)
 	if ! isnothing(matched) 
 		prefix = matched.captures[1]
@@ -509,9 +507,9 @@ end
 function shortenOneTimes!(repr::NumberRepresentationUnicode{T, U}) where {T, U <: Union{ScientificNotation, EngineeringNotation}}
 	sigStr, expStr = decomposeNumberFromString(repr.representation, repr.timesSymbol)
 
-	if ! isnothing(expStr) && isapprox(abs(getSignificand(repr.number)), 1.; atol = repr.toleranceShort)
+	if ! isnothing(expStr) && isapprox(abs(parse(BigFloat, replace(sigStr, '−' => '-'))), 1; atol = repr.toleranceShort, rtol = 0)
 		repr.representation = expStr
-		s = repr.signSignificand ? (occursin("-", sigStr) || occursin("−", sigStr) ? "-" : (occursin("+", sigStr) ? "+" : "")) : ""
+		s = startswith(sigStr, '-') || startswith(sigStr, '−') ? "-" : (startswith(sigStr, '+') ? "+" : "")
 		repr.representation = s * repr.representation
 	end
 
@@ -537,14 +535,11 @@ function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U, S}) where {
 end
 
 function shortenBaseToZero!(repr::AbstractNumberRepresentation{T, U, S}) where {T, U <: Union{ScientificNotation, EngineeringNotation}, S}
-	if isapprox(getExponent(repr.number), 0; atol = repr.toleranceShort)
-		if repr.shortenOneTimes && isapprox(getSignificand(repr.number), 1.; atol = repr.toleranceShort)
-			nDecimals = getNumberOfDecimalsFromString(repr.representation, getTimesSymbol(repr))
-			fmt = repr.signSignificand ? "%+.$(nDecimals)f" : "%.$(nDecimals)f"
-			repr.representation = Printf.format(Printf.Format(fmt), 1.0)
-		else
-			repr.representation = decomposeNumberFromString(repr.representation, getTimesSymbol(repr))[1]
-		end
+	sigStr, expStr = decomposeNumberFromString(repr.representation, getTimesSymbol(repr))
+	if isnothing(expStr)
+		repr.representation = replace(repr.representation, r"10[⁺⁻]?⁰$" => "1")
+	elseif occursin(r"^(?:[+-]?0+|10[⁺⁻]?⁰)$", expStr)
+		repr.representation = sigStr
 	end
 
 	return repr

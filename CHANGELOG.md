@@ -1,6 +1,17 @@
 # Changelog
 
 
+----
+## [1.0.8]
+
+### Fixed
+- Preserve negative signs and use the displayed significand and exponent when shortening representations, including engineering notation and rounded values.
+- Produce ASCII engineering notation with the requested number of decimals.
+- Preserve integer and arbitrary-precision values when parsing numeric strings.
+- Avoid overflow and underflow when scaling extreme finite values in engineering notation.
+- Honour custom Unicode scientific separators, accept character separators, and forward separators through notation-instance constructors.
+- Correct renamed functions and shortening options in the README and documentation quickstart.
+
 
 ----
 ## [1.0.7]
@@ -25,7 +36,6 @@
 
 ## Fixed
 - Improve compatibility of package dependency versions.
-
 
 
 ---

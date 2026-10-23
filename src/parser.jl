@@ -40,19 +40,22 @@ Parses a number string into a numeric value of type `T`, handling both standard 
 - A numeric value of type `T` representing the parsed number.
 """
 function parseNumberFromString(s::AbstractString, times::String, ::Type{T}) where {T <: Real}
-	r = decomposeNumberFromString(s, times)
-	if length(r) > 1
-		significandStr, exponentStr = r
-		significand = parse(Float64, replace(significandStr, r"\s+" => ""))
-		if isnothing(exponentStr)
-			return T(significand)
-		else
-			exponent = parse(Int, replace(exponentStr, r"\s+" => ""))
-			return T(significand * exp10(exponent))
-		end
+	significandStr, exponentStr = decomposeNumberFromString(s, times)
+	significandStr = replace(significandStr, r"\s+" => "")
+	if isnothing(exponentStr) && ! (T <: Integer)
+		return parse(T, significandStr)
 	end
 
-	return parse(T, replace(s, r"\s+" => ""))
+	exponent = isnothing(exponentStr) ? 0 : parse(Int, exponentStr)
+	if T <: Integer
+		parts = split(significandStr, '.'; limit = 2)
+		significand = parse(BigInt, join(parts))
+		exponent -= length(parts) == 2 ? length(parts[2]) : 0
+		value = exponent ≥ 0 ? significand * big(10)^exponent : significand // big(10)^(-exponent)
+		return T(value)
+	end
+
+	return parse(T, significandStr * "e" * string(exponent))
 end
 
 function parseNumberFromString(s::AbstractString, times::String)

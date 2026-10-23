@@ -101,6 +101,15 @@ end
 		@test repr1.representation == before
 	end
 
+	@testset "engineering formatting" begin
+		@test NumberRepresentationPlain(12345.67, EngineeringNotation; decimals = 2).representation == "12.35e3"
+		@test NumberRepresentationPlain(-12345.67, EngineeringNotation; decimals = 2).representation == "-12.35e3"
+		@test NumberRepresentationPlain(1000.0, EngineeringNotation; decimals = 2).representation == "1.00e3"
+		@test NumberRepresentationPlain(999.9, EngineeringNotation; decimals = 0).representation == "1e3"
+		@test NumberRepresentationPlain(0.0012, EngineeringNotation; decimals = 2).representation == "1.20e-3"
+		@test NumberRepresentationPlain(0.0, EngineeringNotation; decimals = 2).representation == "0.00e0"
+	end
+
 end
 
 
@@ -152,7 +161,7 @@ end
 		shortenOneTimes!(repr5)
 		@test repr3.representation == "-10⁻³"
 		@test repr4.representation == "-10⁻³"
-		@test repr5.representation == "10⁻³"
+		@test repr5.representation == "-10⁻³"
 
 		repr6 = NumberRepresentationUnicode(1.00001e3; timesSymbol = "×", decimals = 5, shortenOneTimes = true, toleranceShort = 1e-3)
 		repr7 = NumberRepresentationUnicode(1.00001e3; timesSymbol = "×", decimals = 5, shortenOneTimes = false)
@@ -177,6 +186,33 @@ end
 		@test occursin("×10", repr1.representation)
 		@test ! isnothing(exp)
 		@test e % 3 == 0
+	end
+
+	@testset "shortening preserves values" begin
+		@test NumberRepresentationUnicode(10000.0, EngineeringNotation; decimals = 2, shortenOneTimes = true).representation == "10.00×10³"
+		@test NumberRepresentationUnicode(100000.0, EngineeringNotation; decimals = 2, shortenOneTimes = true).representation == "100.00×10³"
+		@test NumberRepresentationUnicode(-1000.0; shortenOneTimes = true).representation == "-10³"
+		@test NumberRepresentationUnicode(9.99; decimals = 0, shortenBaseToZero = true).representation == "1×10¹"
+		@test NumberRepresentationPlain(9.99; decimals = 0, shortenBaseToZero = true).representation == "1e+01"
+		@test NumberRepresentationUnicode(12.34, EngineeringNotation; decimals = 2, shortenBaseToZero = true).representation == "12.34"
+		@test NumberRepresentationUnicode(-1.0; shortenOneTimes = true, shortenBaseToZero = true).representation == "-1"
+		@test NumberRepresentationUnicode(1.0; shortenOneTimes = true, shortenBaseToZero = true, signSignificand = true, signExponent = true).representation == "+1"
+		@test NumberRepresentationUnicode(0.9999; decimals = 0, signExponent = true).representation == "1×10⁺⁰"
+	end
+
+	@testset "extreme engineering values" begin
+		@test NumberRepresentationUnicode(big"1e400", EngineeringNotation; decimals = 2).representation == "10.00×10³⁹⁹"
+		@test NumberRepresentationUnicode(big"1e-400", EngineeringNotation; decimals = 2).representation == "100.00×10⁻⁴⁰²"
+		@test NumberRepresentationUnicode(nextfloat(0.0), EngineeringNotation; decimals = 2).representation == "4.94×10⁻³²⁴"
+	end
+
+	@testset "custom separators" begin
+		for notation ∈ (FixedPointNotation, ScientificNotation, EngineeringNotation)
+			@test NumberRepresentationUnicode(1200.0, notation; timesSymbol = '×').representation == NumberRepresentationUnicode(1200.0, notation; timesSymbol = "×").representation
+		end
+		@test NumberRepresentationUnicode(1200.0; decimals = 2, timesSymbol = "*", signExponent = true).representation == "1.20*10⁺³"
+		@test NumberRepresentationUnicode(1000.0; timesSymbol = "*", shortenOneTimes = true).representation == "10³"
+		@test NumberRepresentationUnicode(1200.0, ScientificNotation(), NumberRepresentationConfig(; decimals = 2); timesSymbol = "*").representation == "1.20*10³"
 	end
 
 end
@@ -226,6 +262,8 @@ end
 		reprU1 = NumberRepresentationUnicode(1.0, ScientificNotation, configU1; timesSymbol = "×")
 		reprT1 = NumberRepresentationTeX(reprU1; timesSymbol = "\\cdot")
 		@test reprT1.representation == "1 \\cdot 10^{0}"
+		@test NumberRepresentationTeX(1200.0, ScientificNotation(), NumberRepresentationConfig(; decimals = 2); timesSymbol = "\\cdot").representation == "1.20 \\cdot 10^{3}"
+		@test NumberRepresentationTeX(NumberRepresentationUnicode(1200.0; decimals = 2, timesSymbol = "*")).representation == "1.20 \\times 10^{3}"
 	end
 
 	@testset "engineering significand decimals" begin
